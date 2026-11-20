@@ -1,0 +1,40 @@
+# Conventional NN baseline configuration (Sprint 0 skeleton).
+#
+# The baseline NN directly maps the 60 descriptors to the atomic energy,
+# bypassing the BOP physics layer. Values are paper facts; `null` marks
+# values the paper does not specify (docs/equations.md §7).
+#
+# This file is not yet consumed by code; the learning layer lands in Sprint 3.
+
+experiment:
+  name: baseline_nn
+  seed: 42 # implementation decision (paper does not publish seeds)
+  output_dir: checkpoints/
+
+model:
+  type: baseline_nn # descriptors -> atomic energy (direct mapping)
+  architecture: [60, 16, 16, 1] # paper, Table 1
+  n_parameters: 1265 # paper, Table 1 (used as a consistency check)
+  activation: null # UNSPECIFIED in paper
+
+descriptors:
+  legendre_orders: [0, 1, 2, 4, 6]
+  n_radial_centers: 12
+  sigma: 1.0 # Å
+  radial_centers: null # UNSPECIFIED (12 values, Å)
+  cutoff_radius: 6.0 # Å
+  cutoff_d: 1.5 # Å
+
+training:
+  objective: sum_squared_total_energy_error # Eq. (13), literal reading
+  energy_shift_ev_per_atom: 0.38446
+  optimizer: dfp # Davidson-Fletcher-Powell (paper Methods)
+  n_random_restarts: null # UNSPECIFIED
+  regularization:
+    tau: null # UNSPECIFIED
+    gamma: null # UNSPECIFIED
+  forces_in_training: false # paper fact
+
+data:
+  dataset: null # original database not public; see data/README.md
+  n_folds: 10

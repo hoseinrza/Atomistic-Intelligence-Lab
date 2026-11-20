@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite the original paper below (whose
+  methodology it reproduces) and this repository.
+title: Atomistic PINN Lab
+authors:
+  - family-names: Rezazadeh
+    given-names: AmirHossein
+version: 0.1.0
+date-released: "2026-11-20"
+license: MIT
+abstract: >-
+  A research-grade reproduction of the physically informed neural network
+  (PINN) bond-order potential for aluminum introduced by Purja Pun, Batra,
+  Ramprasad and Mishin (Nature Communications, 2019).
+preferred-citation:
+  type: article
+  title: Physically informed artificial neural networks for atomistic modeling of materials
+  authors:
+    - family-names: Purja Pun
+      given-names: G. P.
+    - family-names: Batra
+      given-names: R.
+    - family-names: Ramprasad
+      given-names: R.
+    - family-names: Mishin
+      given-names: Y.
+  journal: Nature Communications
+  year: 2019
+  volume: 10
+  pages: 2339
+  doi: 10.1038/s41467-019-10343-5

@@ -1,0 +1,45 @@
+# PINN-BOP training configuration for Al (Sprint 0 skeleton).
+#
+# Values below are paper facts from G. P. Purja Pun, R. Batra, R. Ramprasad &
+# Y. Mishin, "Physically informed artificial neural networks for atomistic
+# modeling of materials", Nature Communications 10, 2339 (2019).
+# `null` marks values the paper does NOT specify; see docs/equations.md §7
+# ("Known uncertainties"). They must not be silently filled in.
+#
+# This file is not yet consumed by code; the learning layer lands in Sprint 3.
+
+experiment:
+  name: pinn_al
+  seed: 42 # implementation decision (paper does not publish seeds)
+  output_dir: checkpoints/
+
+model:
+  type: pinn # descriptors -> 8 BOP parameters -> BOP energy
+  architecture: [60, 15, 15, 8] # paper, Table 1
+  n_parameters: 1283 # paper, Table 1 (used as a consistency check)
+  activation: null # UNSPECIFIED in paper
+
+descriptors:
+  legendre_orders: [0, 1, 2, 4, 6] # paper, Methods Eq. (3)
+  n_radial_centers: 12 # "12 r0 values", Methods
+  sigma: 1.0 # Å, Eq. (4)
+  radial_centers: null # UNSPECIFIED: the 12 r0 values are not given (Å)
+  cutoff_radius: 6.0 # Å, Eq. (5)
+  cutoff_d: 1.5 # Å, Eq. (5)
+
+physics:
+  bop_parameters: [A, B, alpha, beta, a, h, sigma, lambda] # Methods, Eq. (6)-(12)
+
+training:
+  objective: sum_squared_total_energy_error # Eq. (13), literal reading
+  energy_shift_ev_per_atom: 0.38446 # applied in the pipeline, never stored in data
+  optimizer: dfp # Davidson-Fletcher-Powell (paper Methods)
+  n_random_restarts: null # UNSPECIFIED: paper says "several times"
+  regularization:
+    tau: null # UNSPECIFIED weight regularization strength, Eq. (13)
+    gamma: null # UNSPECIFIED parameter regularization strength, Eq. (13)
+  forces_in_training: false # paper fact: forces are NOT trained or validated
+
+data:
+  dataset: null # original database not public; see data/README.md
+  n_folds: 10 # 10-fold cross-validation (paper Methods)

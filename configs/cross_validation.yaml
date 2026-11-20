@@ -1,0 +1,28 @@
+# 10-fold cross-validation protocol (Sprint 0 skeleton; consumed in Sprint 4).
+
+n_folds: 10 # paper Methods: database randomly partitioned in 10 subsets
+assignment: per_structure # leakage rule: a supercell never spans two folds
+shuffle: true
+seed: 42
+
+models:
+  - pinn
+  - baseline_nn
+  - fixed_bop # same BOP form with parameters fitted once and fixed (paper Fig. 8)
+
+metrics:
+  energy:
+    - rmse_mev_per_atom
+    - mae_mev_per_atom
+    - error_distribution
+  forces:
+    # Paper fact: forces are NOT used in training; they are evaluated
+    # afterwards by the finite-difference method.
+    method: finite_difference
+    quantities: [mae, rmse]
+
+reports:
+  - parity_plot_energy
+  - error_histogram
+  - per_group_errors
+  - cross_validation_summary

@@ -1,0 +1,92 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atomistic-pinn-lab"
+version = "0.1.0"
+description = "Reproduction of the physically informed neural network (PINN) bond-order potential for Al (Purja Pun et al., Nat. Commun. 2019)"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "AmirHossein Rezazadeh" }]
+keywords = [
+  "atomistic modeling",
+  "interatomic potential",
+  "machine learning",
+  "physics-informed neural network",
+  "bond-order potential",
+  "aluminum",
+]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+  "numpy>=1.26",
+  "scipy>=1.11",
+  "torch>=2.2",
+  "ase>=3.23",
+  "pandas>=2.0",
+  "h5py>=3.10",
+  "matplotlib>=3.8",
+  "pyyaml>=6.0",
+  "pydantic>=2.6",
+  "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.5",
+  "mypy>=1.10",
+]
+
+[project.scripts]
+atomistic-pinn = "atomistic_pinn.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+atomistic_pinn = ["py.typed"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+  "unit: fast tests without external data",
+  "integration: tests combining several components",
+  "scientific_validation: tests validating scientific correctness against independent references",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM", "RUF"]
+# Scientific documentation intentionally uses Greek symbols (alpha, sigma, ...)
+# and Angstrom signs; RUF001-003 would flag them as "ambiguous" unicode.
+# SIM300 misfires on the canonical pytest idiom `CONSTANT == pytest.approx(...)`
+# because uppercase attribute names look like Yoda constants.
+ignore = ["RUF001", "RUF002", "RUF003", "SIM300"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src"]
+disallow_untyped_defs = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["ase.*"]
+ignore_missing_imports = true
