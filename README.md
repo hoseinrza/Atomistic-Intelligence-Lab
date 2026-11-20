@@ -28,8 +28,8 @@ remains governed by physics instead of neural-network guesswork.
 | Paper element | Reference | Status |
 | --- | --- | --- |
 | Unit conventions & data contracts | — | ✅ Sprint 0 |
-| 60-dim Legendre/Gaussian descriptors (Eqs. 3–5) | Methods | planned — Sprint 1 |
-| Neighbor lists / PBC geometry | Methods | planned — Sprint 1 |
+| 60-dim Legendre/Gaussian descriptors (Eqs. 3–5) | Methods | ✅ Sprint 1 |
+| Neighbor lists / PBC geometry | Methods | ✅ Sprint 1 |
 | Analytical BOP with 8 NN-predicted parameters (Eqs. 6–12) | Methods | planned — Sprint 2 |
 | PINN network 60×15×15×8 + NN baseline 60×16×16×1 | Table 1 | planned — Sprint 3 |
 | DFP optimization + random restarts + Eq. (13) objective | Methods | planned — Sprint 3 |
@@ -91,7 +91,9 @@ atomistic-pinn benchmark --config configs/cross_validation.yaml
 │   ├── constants.py  units + physical + paper-derived constants
 │   ├── exceptions.py error hierarchy
 │   ├── cli.py        Typer CLI
-│   └── data/         schema (data contracts) + ASE converters
+│   ├── data/         schema (data contracts) + ASE converters
+│   ├── geometry/     neighbor lists (full PBC image enumeration) + angles
+│   └── descriptors/  cutoff, radial Gaussians, Legendre, 60-dim builder
 ├── tests/
 │   ├── unit/                 constants, schema validation
 │   ├── integration/          ASE ↔ schema round trips
@@ -110,6 +112,8 @@ Full module map and dependency rules: [docs/architecture.md](docs/architecture.m
 | [docs/architecture.md](docs/architecture.md) | layers, module map, dependency rules, testing strategy |
 | [docs/data_format.md](docs/data_format.md) | data contracts, units, energy conventions, leakage rules |
 | [docs/reproduction_protocol.md](docs/reproduction_protocol.md) | fidelity levels, dataset plan, target metrics, reporting rules |
+| [docs/md_plan.md](docs/md_plan.md) | molecular dynamics plan (Sprint 4): force route, protocol, validation |
+| [docs/sprint3_plan.md](docs/sprint3_plan.md) | Sprint 3 execution plan: phases, ledger decisions, tests, definition of done |
 
 ## Testing
 

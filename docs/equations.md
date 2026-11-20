@@ -78,6 +78,20 @@ density; `g^(1)` behaves like a dipole moment of unit charges at positions
 the quadrupole moment. Polynomials up to m = 6 were found necessary to
 represent diverse environments.
 
+**Exact identities of the double-sum form** (used as independent checks in
+the scientific tests): reading Σ_{j,k} as an ordered double sum including
+j = k gives, per radial center c,
+
+```text
+g_i^(0)[c] = ( Σ_j f_c(r_ij) )²            (squared local density)
+g_i^(1)[c] = | Σ_j f_c(r_ij) r̂_ij |²       (squared dipole moment)
+```
+
+The second identity proves rigorously that `g^(1) ≥ 0` and vanishes exactly
+for spherically balanced environments — the paper's dipole interpretation.
+Both identities are verified on random structures in
+`tests/scientific_validation/test_descriptors.py`.
+
 Properties exploited by the Sprint 1 tests:
 
 * translation, rotation, and permutation invariance;
@@ -210,17 +224,23 @@ the Supplementary Information, an author request, or an explicitly labeled
 implementation decision) before Sprint 4 reporting. None of them may be
 silently filled in.
 
-1. **Radial centers r₀.** Twelve values are used but their coordinates are
-   not given. Working default (Sprint 1, labeled decision): 12 evenly spaced
-   centers in [0, 5.5] Å (spacing 0.5 Å).
+1. **Radial centers r₀.** 12 values are used but their coordinates are not
+   given. **RESOLVED as a labeled implementation decision** (Sprint 1):
+   evenly spaced 0.5 Å grid, r₀ ∈ {0.0, 0.5, ..., 5.5} Å
+   (`constants.DEFAULT_RADIAL_CENTERS`, exposed via `DescriptorConfig`).
+   Revisit if the Supplementary Information becomes available.
 2. **Descriptor summation range.** Whether the double sum Σ_{j,k} includes
-   `j = k`, and whether pairs are ordered, is not stated. Working default
-   (labeled decision): full ordered double sum over neighbors within cutoff,
-   excluding the center atom itself; an implementation flag will allow both
-   conventions for comparison.
-3. **Descriptor cutoff.** Assumed identical to the BOP cutoff (r_c = 6 Å,
-   d = 1.5 Å); the paper fixes these values in the BOP section and uses the
-   same `f_c` form in Eq. (4).
+   j = k, and whether pairs are ordered, is not stated. **RESOLVED as a
+   labeled implementation decision** (Sprint 1): full ordered double sum
+   over neighbors within cutoff, including j = k (literal reading). This
+   reading makes the exact identities of §3 hold (g^(0) = (Σf)²,
+   g^(1) = |Σf r̂|²) and is implemented in `DescriptorConfig.include_same_pair`;
+   the excluded-pair convention is available behind the same flag for
+   comparison experiments.
+3. **Descriptor cutoff.** **RESOLVED as a labeled implementation decision**
+   (Sprint 1): identical to the BOP cutoff (r_c = 6 Å, d = 1.5 Å), since the
+   paper fixes these values in the BOP section and uses the same f_c form in
+   Eq. (4).
 4. **Activation functions** of the two hidden layers: not specified.
    Candidates: tanh, sigmoid. Decision (labeled) deferred to Sprint 3.
 5. **Output parameter constraints:** none are stated. Physically, A, B, α, β,
@@ -247,3 +267,21 @@ silently filled in.
     squared total-energy errors over supercells (large supercells dominate).
     We implement it literally; any per-atom normalization will be an
     explicitly labeled deviation used only for comparison experiments.
+12. **MD demonstration setup.** The paper's thermostat, timestep, run
+    lengths, and force route *during* MD trajectories are not stated in the
+    main text. Plan (labeled engineering decisions, `docs/md_plan.md`):
+    autograd forces for dynamics — validated against the paper-faithful
+    finite-difference forces on static configurations — with NVE
+    energy conservation as the primary correctness gate and a short seeded
+    NVT run as the demonstration. Training remains energy-only, so the
+    paper's energy-only methodology is unaffected.
+13. **Definition of `p̄_η` (γ-tether target, Eq. 13).** The database contains
+    only structures + DFT energies — no true BOP parameters — so the
+    "database-averaged value of parameter η" is undefined without an extra
+    convention. Candidates (decide at Sprint 3 start, labeled;
+    `docs/sprint3_plan.md` §3.2a): (a) parameters of the once-fitted fixed
+    BOP (paper Fig. 8) — default, also delivers that baseline;
+    (b) running mean of the current predicted parameters over the training
+    set (the γ term then equals the variance of predicted parameters) —
+    behind a config flag. Revisit if the Supplementary Information becomes
+    available.

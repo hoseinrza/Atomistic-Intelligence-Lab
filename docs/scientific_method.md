@@ -137,12 +137,15 @@ Maintaining this distinction is a hard requirement of the project.
 | Units Å / eV / eV/Å | paper convention | adopted | `constants.py` |
 | r_c = 6 Å, d = 1.5 Å | paper fact | pinned | `constants.py` |
 | σ = 1.0, m ∈ {0,1,2,4,6}, 12 r₀ | paper fact | pinned | `constants.py` |
-| 12 radial center coordinates | **unspecified** | 12 × 0.5 Å grid (pending SI/author check) | `docs/equations.md` §7.1 |
-| j = k in descriptor sum | **unspecified** | full ordered sum, flag for alternatives | `docs/equations.md` §7.2 |
+| 12 radial center coordinates | **unspecified** | RESOLVED (S1): 0.5 Å grid 0.0-5.5, labeled decision | `constants.py`, `docs/equations.md` §7.1 |
+| j = k in descriptor sum | **unspecified** | RESOLVED (S1): ordered sum incl. j=k (literal; g^(1)=\|Σf r̂\|² identity holds), flag for alternatives | `docs/equations.md` §7.2 |
+| Descriptor cutoff | **unspecified** | RESOLVED (S1): same r_c=6 Å, d=1.5 Å as BOP | `docs/equations.md` §7.3 |
 | Activation functions | **unspecified** | deferred to Sprint 3, labeled | `docs/equations.md` §7.4 |
 | τ, γ, restart count | **unspecified** | tuned/documented later, labeled | `docs/equations.md` §7.6–7 |
+| p̄_η (γ-tether target) | **unspecified** | RESOLVED at S3 start: fixed-BOP pre-fit parameters (default) or self-mean (flag) | `docs/equations.md` §7.13, `docs/sprint3_plan.md` |
 | DFP implementation | paper fact + textbook variant | DFP w/ numerical gradients | `docs/equations.md` §7.8 |
-| Force evaluation by FD | paper fact | faithful default | Sprint 4 |
+| Force evaluation by FD | paper fact | faithful default (static configurations) | Sprint 4 |
+| MD demo forces + ensemble setup | unspecified / engineering | labeled decisions: autograd forces (FD-validated), NVE gate + short NVT | `docs/md_plan.md` |
 | PyTorch implementation of physics layer | engineering | single torch implementation, CPU-compatible | `docs/architecture.md` |
 | Alternative dataset | deviation | methodological reproduction only | `data/README.md` |
 | Per-atom-normalized objective | experimental deviation | comparison experiments only | `docs/equations.md` §7.11 |
