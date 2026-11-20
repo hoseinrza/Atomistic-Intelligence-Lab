@@ -8,13 +8,15 @@ the current state of the repository; update this table per sprint.
 | --- | --- | --- |
 | 0 | Project foundation: units, data contracts, CI, docs | ✅ done |
 | 1 | Geometry + descriptors (neighbor lists, PBC, 60-dim fingerprint) | ✅ done |
-| 2 | Bond-order potential physics layer (Eqs. 6–12) | planned |
+| 2 | Bond-order potential physics layer (Eqs. 6–12) | 🚧 in progress |
 | 3 | Networks + training (PINN, NN baseline, Eq. 13 objective, DFP) | planned |
 | 4 | Evaluation + simulation (metrics, cross-validation, forces, ASE, MD) | planned |
 
 ---
 
 ## Sprint 0 — Project foundation (done)
+
+**Delivered record:** [sprint0.md](sprint0.md).
 
 **Goal:** a runnable, tested, documented skeleton so every later sprint
 adds physics to an already-solid base.
@@ -34,6 +36,8 @@ adds physics to an already-solid base.
 ledger is either pinned or explicitly labeled.
 
 ## Sprint 1 — Geometry + descriptors (done)
+
+**Delivered record + decisions:** [sprint1.md](sprint1.md).
 
 **Goal:** the fixed-length, invariant 60-dimensional fingerprint
 `G_i` of every atom's local environment (Eqs. 3–5).
@@ -55,7 +59,9 @@ ledger is either pinned or explicitly labeled.
   forbidden components).
 * Deterministic, sort-free accumulation per atom.
 
-## Sprint 2 — Bond-order potential (planned)
+## Sprint 2 — Bond-order potential (in progress)
+
+**Live status + test gates:** [sprint2.md](sprint2.md).
 
 **Goal:** compute `E_i` from neighbor positions and the eight per-atom
 parameters with the full physics: repulsion, bond order, screening,
@@ -80,7 +86,7 @@ promotion/embedding (Eqs. 6–12).
 parameters → BOP) vs. baseline NN 60×16×16×1 (descriptors → energy
 directly), isolating the effect of the physics layer. Full execution plan
 with build order, ledger decisions, and definition of done:
-[sprint3_plan.md](sprint3_plan.md).
+[sprint3.md](sprint3.md).
 
 **Phases (build order)**
 
@@ -114,6 +120,8 @@ with build order, ledger decisions, and definition of done:
 * End-to-end `train` run from one config with full provenance logging.
 
 ## Sprint 4 — Evaluation + simulation (planned)
+
+**Full plan:** [sprint4.md](sprint4.md); MD deep-dive: [md_plan.md](md_plan.md).
 
 **Goal:** prove the reproduction against paper metrics and make the
 potential usable in real atomistic workflows.

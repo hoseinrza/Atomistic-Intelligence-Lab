@@ -279,7 +279,7 @@ silently filled in.
     only structures + DFT energies — no true BOP parameters — so the
     "database-averaged value of parameter η" is undefined without an extra
     convention. Candidates (decide at Sprint 3 start, labeled;
-    `docs/sprint3_plan.md` §3.2a): (a) parameters of the once-fitted fixed
+    `docs/sprint3.md` §3.2a): (a) parameters of the once-fitted fixed
     BOP (paper Fig. 8) — default, also delivers that baseline;
     (b) running mean of the current predicted parameters over the training
     set (the γ term then equals the variance of predicted parameters) —

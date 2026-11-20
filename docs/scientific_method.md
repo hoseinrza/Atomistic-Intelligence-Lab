@@ -142,7 +142,7 @@ Maintaining this distinction is a hard requirement of the project.
 | Descriptor cutoff | **unspecified** | RESOLVED (S1): same r_c=6 Å, d=1.5 Å as BOP | `docs/equations.md` §7.3 |
 | Activation functions | **unspecified** | deferred to Sprint 3, labeled | `docs/equations.md` §7.4 |
 | τ, γ, restart count | **unspecified** | tuned/documented later, labeled | `docs/equations.md` §7.6–7 |
-| p̄_η (γ-tether target) | **unspecified** | RESOLVED at S3 start: fixed-BOP pre-fit parameters (default) or self-mean (flag) | `docs/equations.md` §7.13, `docs/sprint3_plan.md` |
+| p̄_η (γ-tether target) | **unspecified** | RESOLVED at S3 start: fixed-BOP pre-fit parameters (default) or self-mean (flag) | `docs/equations.md` §7.13, `docs/sprint3.md` |
 | DFP implementation | paper fact + textbook variant | DFP w/ numerical gradients | `docs/equations.md` §7.8 |
 | Force evaluation by FD | paper fact | faithful default (static configurations) | Sprint 4 |
 | MD demo forces + ensemble setup | unspecified / engineering | labeled decisions: autograd forces (FD-validated), NVE gate + short NVT | `docs/md_plan.md` |

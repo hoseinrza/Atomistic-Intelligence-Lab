@@ -113,7 +113,7 @@ Full module map and dependency rules: [docs/architecture.md](docs/architecture.m
 | [docs/data_format.md](docs/data_format.md) | data contracts, units, energy conventions, leakage rules |
 | [docs/reproduction_protocol.md](docs/reproduction_protocol.md) | fidelity levels, dataset plan, target metrics, reporting rules |
 | [docs/md_plan.md](docs/md_plan.md) | molecular dynamics plan (Sprint 4): force route, protocol, validation |
-| [docs/sprint3_plan.md](docs/sprint3_plan.md) | Sprint 3 execution plan: phases, ledger decisions, tests, definition of done |
+| [docs/sprint0.md](docs/sprint0.md) … [docs/sprint4.md](docs/sprint4.md) | one document per sprint: delivered records (0–1), live status (2), execution plans (3–4) |
 
 ## Testing
 
