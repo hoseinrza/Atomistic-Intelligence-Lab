@@ -21,9 +21,11 @@ descriptors:
   legendre_orders: [0, 1, 2, 4, 6]
   n_radial_centers: 12
   sigma: 1.0 # Å
-  radial_centers: null # UNSPECIFIED (12 values, Å)
+  # IMPLEMENTATION DECISION (paper unspecified), see docs/equations.md §7.1.
+  radial_centers: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5]
   cutoff_radius: 6.0 # Å
   cutoff_d: 1.5 # Å
+  include_same_pair: true # literal Σ_{j,k} reading, Eq. (3)
 
 training:
   objective: sum_squared_total_energy_error # Eq. (13), literal reading

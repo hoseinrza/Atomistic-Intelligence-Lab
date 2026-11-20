@@ -63,6 +63,18 @@ DESCRIPTOR_LEGENDRE_ORDERS: tuple[int, ...] = (0, 1, 2, 4, 6)
 N_RADIAL_CENTERS: int = 12
 """Number of Gaussian centers r₀ ("12 r0 values", Methods)."""
 
+DEFAULT_RADIAL_CENTERS: tuple[float, ...] = tuple(0.5 * i for i in range(N_RADIAL_CENTERS))
+"""Default 12 radial centers r₀ in Å: 0.0, 0.5, 1.0, ..., 5.5.
+
+IMPLEMENTATION DECISION, not a paper fact: the paper states that 12 r₀ values
+are used but does not give their coordinates (docs/equations.md §7.1). This
+evenly spaced 0.5 Å grid spans the range of Al interatomic distances
+(nearest-neighbor shell ≈ 2.4-3.0 Å, second shell ≈ 4.0 Å, compressed bonds
+below 2.4 Å). To be revised if the paper's Supplementary Information becomes
+available; the choice is exposed through ``DescriptorConfig.radial_centers``
+so alternative grids can be compared without code changes.
+"""
+
 N_DESCRIPTORS_PER_ATOM: int = 60
 """Descriptor count k = 5 orders × 12 radial centers."""
 

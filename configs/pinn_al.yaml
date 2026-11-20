@@ -23,9 +23,12 @@ descriptors:
   legendre_orders: [0, 1, 2, 4, 6] # paper, Methods Eq. (3)
   n_radial_centers: 12 # "12 r0 values", Methods
   sigma: 1.0 # Å, Eq. (4)
-  radial_centers: null # UNSPECIFIED: the 12 r0 values are not given (Å)
+  # IMPLEMENTATION DECISION (paper unspecified): evenly spaced 0.5 Å grid,
+  # see constants.DEFAULT_RADIAL_CENTERS and docs/equations.md §7.1.
+  radial_centers: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5]
   cutoff_radius: 6.0 # Å, Eq. (5)
   cutoff_d: 1.5 # Å, Eq. (5)
+  include_same_pair: true # literal Σ_{j,k} reading, Eq. (3) (§7.2)
 
 physics:
   bop_parameters: [A, B, alpha, beta, a, h, sigma, lambda] # Methods, Eq. (6)-(12)
