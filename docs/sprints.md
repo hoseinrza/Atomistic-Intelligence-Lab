@@ -8,7 +8,7 @@ the current state of the repository; update this table per sprint.
 | --- | --- | --- |
 | 0 | Project foundation: units, data contracts, CI, docs | ✅ done |
 | 1 | Geometry + descriptors (neighbor lists, PBC, 60-dim fingerprint) | ✅ done |
-| 2 | Bond-order potential physics layer (Eqs. 6–12) | 🚧 in progress |
+| 2 | Bond-order potential physics layer (Eqs. 6–12) | ✅ done |
 | 3 | Networks + training (PINN, NN baseline, Eq. 13 objective, DFP) | planned |
 | 4 | Evaluation + simulation (metrics, cross-validation, forces, ASE, MD) | planned |
 

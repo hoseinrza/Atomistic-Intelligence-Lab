@@ -285,3 +285,12 @@ silently filled in.
     set (the γ term then equals the variance of predicted parameters) —
     behind a config flag. Revisit if the Supplementary Information becomes
     available.
+15. **Fitted BOP parameter values (fixed-BOP baseline, Fig. 8).** The
+    authors fitted the fixed-parameter BOP baseline to the same DFT
+    database, but the resulting eight parameter values are not given in the
+    main text (possibly in the Supplementary Information). Consequences for
+    Sprint 3/4: the fixed-BOP baseline will either be *refitted here*
+    (reported as "re-fit", never as the paper's fit — related to §7.13
+    option (a)) or compared only qualitatively. The physics-layer tests use
+    synthetic physical parameter sets (A·α < B·β for short-range repulsive
+    dominance; positive σ, a, λ) — these are fixtures, not paper values.
