@@ -123,11 +123,16 @@ def run_training(resolved: ResolvedTrainingConfig, db: TrainingDatabase) -> Trai
         gamma_value: float = gamma_raw
         if training.p_bar_eta == "fixed_bop_prefit":
             # One computation, two uses: γ target + fixed-BOP baseline (§7.13).
+            # Engineering: the pre-fit budget follows the resolved training
+            # budget (restarts/iterations), so a dev-run config controls its
+            # total wall time; full-scale configs set their own larger budget.
             fixed_fit = fit_fixed_bop(
                 db,
                 gradient=training.gradients,
-                n_restarts=3,
+                n_restarts=min(3, n_restarts),
                 master_seed=resolved.experiment.seed,
+                max_iterations=training.max_iterations,
+                gradient_tolerance=training.gradient_tolerance,
             )
             tether = TetherConfig(
                 gamma=gamma_value,
