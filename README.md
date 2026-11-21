@@ -134,6 +134,32 @@ Full module map and dependency rules: [docs/architecture.md](docs/architecture.m
 | [docs/md_plan.md](docs/md_plan.md) | molecular dynamics plan (Sprint 4): force route, protocol, validation |
 | [docs/sprint0.md](docs/sprint0.md) … [docs/sprint4.md](docs/sprint4.md) | one document per sprint: delivered records (0–3), live plans (4) |
 
+## Molecular dynamics demonstration
+
+The trained potential plugs into ASE (`atoms.get_potential_energy()` /
+`atoms.get_forces()`) and runs seeded NVE/NVT trajectories
+([docs/md_plan.md](docs/md_plan.md) for the full protocol). A small labeled
+demonstration (32-atom FCC Al, 2 ps NVE + NVT, fixture parameters — a physics
+demonstration, not a trained potential) is committed under
+[examples/md_demo/](examples/md_demo/):
+
+| File | Content |
+| --- | --- |
+| [examples/md_demo/nve_trajectory.extxyz](examples/md_demo/nve_trajectory.extxyz) | NVE trajectory frames (openable in OVITO/ASE) |
+| [examples/md_demo/nvt_trajectory.extxyz](examples/md_demo/nvt_trajectory.extxyz) | seeded Langevin NVT trajectory frames |
+| [examples/md_demo/energy_temperature.csv](examples/md_demo/energy_temperature.csv) | per-frame energy/temperature/neighbor record |
+| [examples/md_demo/md_demo.png](examples/md_demo/md_demo.png) | four-panel energy and temperature figure |
+| [examples/md_demo/summary.json](examples/md_demo/summary.json) | provenance (drift −6.5e-8 relative over 2 ps, seeds, force source) |
+
+![MD demonstration](examples/md_demo/md_demo.png)
+
+Reproduce it — with a trained checkpoint for the real potential:
+
+```bash
+python experiments/run_md_demo.py --checkpoint checkpoints/pinn_al_ani_dev.pt
+python experiments/run_md_demo.py --fixture --conventional-cells 2 --nve-steps 1000 --nvt-steps 400
+```
+
 ## Testing
 
 ```bash

@@ -1,0 +1,35 @@
+{
+  "n_atoms": 32,
+  "conventional_cells": 2,
+  "force_source": "fixture parameters (physics demonstration, not trained)",
+  "nve": {
+    "ensemble": "NVE",
+    "timestep_fs": 1.0,
+    "n_steps": 1000,
+    "seed": 42,
+    "initial_total_energy_ev": -142.4083363348768,
+    "final_total_energy_ev": -142.40834556029222,
+    "energy_drift_ev": -9.225415425362371e-06,
+    "energy_drift_fraction": -6.478142827024237e-08,
+    "final_temperature_k": 254.60672020236717,
+    "min_neighbors_first_frame": 54.0,
+    "min_neighbors_last_frame": 51.0,
+    "log_interval": 100
+  },
+  "nvt": {
+    "ensemble": "NVT",
+    "timestep_fs": 1.0,
+    "n_steps": 400,
+    "seed": 42,
+    "initial_total_energy_ev": -142.73441247898646,
+    "final_total_energy_ev": -142.20088497975635,
+    "energy_drift_ev": 0.5335274992301038,
+    "energy_drift_fraction": 0.0037379037750174676,
+    "final_temperature_k": 249.82363014923226,
+    "min_neighbors_first_frame": 51.0,
+    "min_neighbors_last_frame": 48.0,
+    "log_interval": 100,
+    "thermostat": "langevin"
+  },
+  "md_config": "configs/md_demo.yaml"
+}
