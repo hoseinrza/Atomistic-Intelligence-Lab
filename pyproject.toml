@@ -88,5 +88,5 @@ warn_redundant_casts = true
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
-module = ["ase.*"]
+module = ["ase.*", "yaml"]
 ignore_missing_imports = true

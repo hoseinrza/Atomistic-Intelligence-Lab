@@ -9,7 +9,7 @@ the current state of the repository; update this table per sprint.
 | 0 | Project foundation: units, data contracts, CI, docs | ✅ done |
 | 1 | Geometry + descriptors (neighbor lists, PBC, 60-dim fingerprint) | ✅ done |
 | 2 | Bond-order potential physics layer (Eqs. 6–12) | ✅ done |
-| 3 | Networks + training (PINN, NN baseline, Eq. 13 objective, DFP) | planned |
+| 3 | Networks + training (PINN, NN baseline, Eq. 13 objective, DFP) | ✅ done (pipeline-validated; real-data run pending dataset) |
 | 4 | Evaluation + simulation (metrics, cross-validation, forces, ASE, MD) | planned |
 
 ---
@@ -84,7 +84,7 @@ promotion/embedding (Eqs. 6–12).
 * Total/atomic energy consistency; finite-difference vs. autograd forces
   (two independent methods).
 
-## Sprint 3 — Networks + training (planned)
+## Sprint 3 — Networks + training (done — phases 3.1–3.4; phase 3.5 pending dataset)
 
 **Goal:** learn the eight BOP parameters. PINN 60×15×15×8 (descriptors →
 parameters → BOP) vs. baseline NN 60×16×16×1 (descriptors → energy
