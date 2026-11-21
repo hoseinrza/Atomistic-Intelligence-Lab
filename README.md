@@ -31,8 +31,8 @@ remains governed by physics instead of neural-network guesswork.
 | 60-dim Legendre/Gaussian descriptors (Eqs. 3–5) | Methods | ✅ Sprint 1 |
 | Neighbor lists / PBC geometry | Methods | ✅ Sprint 1 |
 | Analytical BOP with 8 NN-predicted parameters (Eqs. 6–12) | Methods | planned — Sprint 2 |
-| PINN network 60×15×15×8 + NN baseline 60×16×16×1 | Table 1 | planned — Sprint 3 |
-| DFP optimization + random restarts + Eq. (13) objective | Methods | planned — Sprint 3 |
+| PINN network 60×15×15×8 + NN baseline 60×16×16×1 | Table 1 | ✅ Sprint 3 |
+| DFP optimization + random restarts + Eq. (13) objective | Methods | ✅ Sprint 3 (pipeline validated on synthetic data) |
 | 10-fold cross-validation | Methods | planned — Sprint 4 |
 | Force evaluation by finite differences (post-training only) | Methods | planned — Sprint 4 |
 | ASE calculator + basic MD | — | planned — Sprint 4 |

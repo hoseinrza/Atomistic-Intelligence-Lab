@@ -86,7 +86,7 @@ strategy → tests. Full equations: `docs/equations.md`.
   finite-difference forces against autograd forces (two independent
   methods).
 
-### 3.3 Networks (Sprint 3)
+### 3.3 Networks (Sprint 3 — ✅ implemented, pipeline-validated)
 
 * **Purpose:** PINN (60×15×15×8) maps descriptors to the eight BOP
   parameters; the baseline NN (60×16×16×1) maps descriptors directly to
@@ -97,7 +97,7 @@ strategy → tests. Full equations: `docs/equations.md`.
   the full model reproduces the BOP engine exactly when given fixed
   parameters (contract test between the learning and physics layers).
 
-### 3.4 Training (Sprint 3)
+### 3.4 Training (Sprint 3 — ✅ implemented, pipeline-validated)
 
 * **Purpose:** minimize Eq. (13) — squared total-energy errors, weight
   regularization (τ), and a tether of predicted parameters to their

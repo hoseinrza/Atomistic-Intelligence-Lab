@@ -30,13 +30,13 @@ final report.
 
 | Item | Ledger | Proposal (labeled, revisitable) |
 | --- | --- | --- |
-| Activation functions | §7.4 | `tanh` (smooth everywhere — matches the differentiable-physics design; sigmoid kept behind a config flag for comparison) |
+| Activation functions | §7.4 — **RESOLVED** | `tanh` (smooth everywhere — matches the differentiable-physics design; sigmoid kept behind a config flag for comparison) |
 | Weight initialization | engineering | seeded `torch.Generator` per restart; scheme (e.g. Xavier/Glorot) named in config; paper says only "random states" |
-| τ, γ values | §7.6 | small documented sweep targeting the 3–4 meV/atom band; chosen values recorded in config + report |
-| Number of random restarts | §7.7 | 5 (paper: "several times") |
-| DFP line search | §7.8 | textbook DFP update + backtracking Armijo line search; gradients **numerical** per the resolved §7.8 decision (autograd used only as cross-check) |
-| Output parameter constraints | §7.5 | literal free outputs; log per-parameter distributions to detect drift into unphysical ranges |
-| **p̄_η definition (γ-tether target)** | §7.13 (new) | see §3.2 below — default: parameters of the pre-fitted fixed BOP; alternative: running mean of current predictions, behind a config flag |
+| τ, γ values | §7.6 — **RESOLVED (initial values, sweep pending)** | documented targeting the 3–4 meV/atom band; chosen values recorded in config + report |
+| Number of random restarts | §7.7 — **RESOLVED** | 5 (paper: "several times") |
+| DFP line search | §7.8 — **RESOLVED** | textbook DFP update + backtracking Armijo line search; gradients **numerical** per the resolved §7.8 decision (autograd used only as cross-check) |
+| Output parameter constraints | §7.5 — **RESOLVED** | literal free outputs; log per-parameter distributions to detect drift into unphysical ranges |
+| **p̄_η definition (γ-tether target)** | §7.13 — **RESOLVED (default (a))** | see §3.2 below — default: parameters of the pre-fitted fixed BOP; alternative: running mean of current predictions, behind a config flag |
 
 ## 2. Phase 3.1 — Networks (`atomistic_pinn.models`)
 

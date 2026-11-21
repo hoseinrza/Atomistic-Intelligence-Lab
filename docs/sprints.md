@@ -44,7 +44,8 @@ ledger is either pinned or explicitly labeled.
 
 **Deliverables**
 
-* `geometry/`: skin-based neighbor list with full PBC image enumeration,
+* `geometry/`: neighbor list with full PBC image enumeration (no
+  minimum-image shortcuts; a skin-based list is deferred to the MD sprint),
   distances, angles.
 * `descriptors/`: cutoff function (C³-smooth), radial Gaussians, Legendre
   polynomials of bond angles, 60-dim builder.
@@ -55,13 +56,14 @@ ledger is either pinned or explicitly labeled.
 * Dimension = 60; C³ cutoff smoothness.
 * Agreement with a slow, independent reference implementation on random
   configurations.
-* Hand-checkable symmetric cases (e.g. perfect FCC site zeroes symmetry-
-  forbidden components).
-* Deterministic, sort-free accumulation per atom.
+* Hand-checkable symmetric cases (perfect FCC site zeroes the
+  symmetry-forbidden dipole block `g^(1)`; all four site rows identical).
+* Deterministic accumulation order per atom (neighbor entries sorted by
+  distance/index/shift in the neighbor list).
 
-## Sprint 2 — Bond-order potential (in progress)
+## Sprint 2 — Bond-order potential (done)
 
-**Live status + test gates:** [sprint2.md](sprint2.md).
+**Delivered record:** [sprint2.md](sprint2.md).
 
 **Goal:** compute `E_i` from neighbor positions and the eight per-atom
 parameters with the full physics: repulsion, bond order, screening,
@@ -76,7 +78,9 @@ promotion/embedding (Eqs. 6–12).
 
 * Closed-form single-pair energies; pairwise additivity of the repulsive term.
 * Screening factor = 1 outside the cutoff spheroid; minimal on the bond axis.
-* Perfect-crystal energy against a hand-computed value.
+* Perfect crystal: uniform atomic energies on pristine FCC; crystal values
+  covered by the independent-reference agreement (a literal hand-computed
+  crystal value is not analytically tractable — see sprint2.md).
 * Total/atomic energy consistency; finite-difference vs. autograd forces
   (two independent methods).
 
