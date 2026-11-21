@@ -17,12 +17,22 @@ report that generates it.
 1. Download the paper's Supplementary Information (Supplementary Tables 1–3
    describe the composition of the training and testing databases) from the
    journal page; extract the structure-group composition.
+   **Done 2026-11-21** — composition transcribed and arithmetically verified
+   in `docs/dataset_composition.md` (composition only; no positions/energies
+   in the SI; provenance traced to the non-public Botu & Ramprasad database).
 2. Request the databases from the corresponding author
    (Y. Mishin, George Mason University; see paper Data availability) and log
-   the outcome in `data/README.md`.
+   the outcome in `data/README.md`. **Still open.**
 3. If unsuccessful, survey alternative public Al DFT datasets against the
    criteria in `data/README.md`; select one, record the rationale and the
    provenance here, and proceed with the methodological reproduction.
+   **Survey done 2026-11-21; selection: ANI-Al** (Smith et al., *Nat.
+   Commun.* 12, 92 (2021); 6,352 single-element Al PBE calculations with
+   energies and forces) — full survey, criteria mapping, download
+   verification, and the license caveat recorded in `data/README.md`
+   ("Alternative dataset survey and selection"). Step 2 remains open in
+   parallel; an author-sourced database would still be reported as a
+   separate fidelity level if it arrives later.
 
 ## Protocol steps (sprint-mapped)
 

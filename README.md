@@ -130,6 +130,7 @@ Full module map and dependency rules: [docs/architecture.md](docs/architecture.m
 | [docs/architecture.md](docs/architecture.md) | layers, module map, dependency rules, testing strategy |
 | [docs/data_format.md](docs/data_format.md) | data contracts, units, energy conventions, leakage rules |
 | [docs/reproduction_protocol.md](docs/reproduction_protocol.md) | fidelity levels, dataset plan, target metrics, reporting rules |
+| [docs/dataset_composition.md](docs/dataset_composition.md) | transcribed + verified composition of the paper's DFT database (SI Tables 1–3) |
 | [docs/md_plan.md](docs/md_plan.md) | molecular dynamics plan (Sprint 4): force route, protocol, validation |
 | [docs/sprint0.md](docs/sprint0.md) … [docs/sprint4.md](docs/sprint4.md) | one document per sprint: delivered records (0–3), live plans (4) |
 

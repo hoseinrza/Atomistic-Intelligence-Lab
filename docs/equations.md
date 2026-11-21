@@ -260,9 +260,14 @@ silently filled in.
    labeled experimental extension.
 10. **Dataset.** The 3,649-supercell training/validation database and the
     26,425-supercell testing database are not publicly downloadable (paper:
-    Supplementary Information / on request). See `data/README.md` and
-    `docs/reproduction_protocol.md` for the acquisition plan and the
-    alternative-dataset workflow.
+    Supplementary Information / on request). **Status 2026-11-21:** the
+    Supplementary Information was obtained; its group-by-group database
+    composition is transcribed and verified in `docs/dataset_composition.md`
+    (composition only — no positions/energies). The alternative dataset for
+    the methodological reproduction is selected: ANI-Al (Smith et al. 2021,
+    6,352 single-element Al PBE calculations) — survey and provenance in
+    `data/README.md`. Results remain "methodological reproduction
+    (alternative data)".
 11. **Objective normalization.** Eq. (13) as written sums *unweighted*
     squared total-energy errors over supercells (large supercells dominate).
     We implement it literally; any per-atom normalization will be an
