@@ -246,3 +246,16 @@ def test_descriptor_config_validation() -> None:
         DescriptorConfig(radial_centers=())
     with pytest.raises(ValueError, match="cutoff_radius"):
         DescriptorConfig(cutoff_radius=-1.0)
+
+
+def test_perfect_fcc_zeroes_symmetry_forbidden_descriptors() -> None:
+    # The FCC site environment is inversion-symmetric about the atom: every
+    # neighbor vector v has the partner −v at the same distance, so
+    # Σ_j f(r_ij) r̂_ij = 0 and the dipole identity gives
+    # g^(1)[c] = |Σ_j f_c(r_ij) r̂_ij|² = 0 for every radial center c —
+    # the order-m = 1 block (slots 12-23) must vanish. Orders 0, 2, 4, 6
+    # are pair-angle sums and are NOT forced to zero.
+    atoms = bulk("Al", "fcc", a=4.05, cubic=True)
+    desc = compute_structure_descriptors(structure_from_ase(atoms, structure_id="al4"))
+    np.testing.assert_allclose(desc[:, 12:24], 0.0, atol=1e-10)
+    assert np.abs(desc[:, 0:12]).max() > 1e-3  # order 0 is nonzero (density)

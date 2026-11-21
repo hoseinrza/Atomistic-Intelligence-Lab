@@ -34,6 +34,7 @@ def generate_synthetic_database(
     n_structures: int = 24,
     seed: int = 7,
     truth_params: dict[str, float] | None = None,
+    with_periodic: bool = True,
 ) -> Dataset:
     """Generate the labeled synthetic development database.
 
@@ -61,7 +62,7 @@ def generate_synthetic_database(
 
     structures: list[AtomicStructure] = []
     for k in range(n_structures):
-        kind = k % 4
+        kind = k % 4 if with_periodic else 2 + k % 2
         if kind in (0, 1):  # half: periodic FCC cells
             a = float(rng.uniform(3.6, 4.6))
             positions = _fcc_cubic_positions(a)
@@ -106,6 +107,7 @@ def generate_synthetic_database(
             "synthetic": True,
             "truth_params": params,
             "seed": seed,
+            "with_periodic": with_periodic,
         },
     )
     return Dataset(metadata=metadata, structures=structures)

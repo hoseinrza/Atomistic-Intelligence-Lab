@@ -138,12 +138,17 @@ class TrainingCfg(BaseModel):
 
 
 class SyntheticCfg(BaseModel):
-    """Synthetic development database (pipeline validation only, not DFT)."""
+    """Synthetic development database (pipeline validation only, not DFT).
+
+    ``with_periodic=False`` yields clusters and dimers only — a fast
+    pipeline-validation variant without periodic-image work.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
     n_structures: int = 24
     seed: int = 7
+    with_periodic: bool = True
 
 
 class DataCfg(BaseModel):

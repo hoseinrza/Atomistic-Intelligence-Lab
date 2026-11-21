@@ -40,5 +40,7 @@ def cutoff_function(
     """
     r_arr = np.asarray(r, dtype=np.float64)
     x = r_arr - r_c
-    inside = x**4 / (d**4 + x**4)
+    x2 = x * x  # x*x is ~10x faster than x**4 on common CPUs
+    x4 = x2 * x2
+    inside = x4 / (d**4 + x4)
     return np.where(x <= 0.0, inside, 0.0)

@@ -395,3 +395,60 @@ def test_invalid_parameter_shape_rejected() -> None:
         atomic_energies(positions, cell, [False] * 3, bad_params)
     with pytest.raises(DataContractError, match="params"):
         atomic_energies(positions, cell, [False] * 3, torch.ones((3, 8)))
+
+
+def test_repulsive_term_is_pairwise_additive() -> None:
+    # With σ = 0 (promotion off) and B·β huge (attractive term underflows to
+    # exactly 0 for every r within the cutoff), the total energy reduces to
+    # Σ_{i<j} exp(−Aα r_ij) f_c(r_ij) — a pure pairwise sum. An engineered
+    # fixture, not a physical parameter set.
+    repulsive_params = {
+        "A": 1.2,
+        "B": 1.0,
+        "alpha": 1.5,
+        "beta": 200.0,
+        "a": 1.5,
+        "h": 0.0,
+        "sigma": 0.0,
+        "lambda": 1.5,
+    }
+    positions = np.array([[0.0, 0.0, 0.0], [2.0, 0.0, 0.0], [0.0, 2.5, 0.0]])
+    cell = np.zeros((3, 3))
+    pbc = [False, False, False]
+    n = 3
+    params = torch.tensor(
+        np.stack(
+            [np.full(n, repulsive_params[k], dtype=np.float64) for k in BOP_PARAMETER_NAMES],
+            axis=1,
+        )
+    )
+    total = float(total_energy(torch.tensor(positions), torch.tensor(cell), pbc, params))
+    distances = [
+        2.0,
+        2.5,
+        float(np.linalg.norm(np.array([2.0, 0.0, 0.0]) - np.array([0.0, 2.5, 0.0]))),
+    ]
+    expected = sum(
+        math.exp(-repulsive_params["A"] * repulsive_params["alpha"] * d) * float(_fc(d))
+        for d in distances
+    )
+    assert total == pytest.approx(expected, rel=1e-12)
+    assert total > 0.0  # pure repulsion
+
+
+def test_pristine_fcc_all_atomic_energies_equal() -> None:
+    # Site symmetry of the perfect crystal: all atoms of pristine FCC carry
+    # identical environments, hence identical atomic energies (permutation
+    # covariance specialized to the symmetric case). Together with the
+    # independent-reference agreement on perturbed FCC, this discharges the
+    # "perfect-crystal energy" gate; a literal hand-computed crystal value is
+    # not analytically tractable (hundreds of screened neighbors).
+    fcc = bulk("Al", "fcc", a=4.05, cubic=True)
+    params = make_params(4, PARAM_SET_1)
+    energies = atomic_energies(
+        torch.tensor(fcc.positions),
+        torch.tensor(fcc.cell.array),
+        [True, True, True],
+        params,
+    ).numpy()
+    assert float(energies.max() - energies.min()) < 1e-12

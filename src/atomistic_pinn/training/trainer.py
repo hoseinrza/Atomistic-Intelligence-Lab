@@ -209,6 +209,7 @@ def build_database(resolved: ResolvedTrainingConfig) -> TrainingDatabase:
         dataset = generate_synthetic_database(
             n_structures=resolved.data.synthetic.n_structures,
             seed=resolved.data.synthetic.seed,
+            with_periodic=resolved.data.synthetic.with_periodic,
         )
         return TrainingDatabase(dataset, resolved.descriptors.to_descriptor_config())
     raise ConfigurationError(

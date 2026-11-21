@@ -174,9 +174,7 @@ def test_self_mean_tether_matches_fixed_target_at_the_mean(db) -> None:
     gamma = 0.02
 
     value_self = float(
-        objective_value(
-            model, db, x, tau=0.0, tether=TetherConfig(gamma=gamma, mode="self_mean")
-        )
+        objective_value(model, db, x, tau=0.0, tether=TetherConfig(gamma=gamma, mode="self_mean"))
     )
     predictions = model.predicted_parameters(db)
     mean = predictions.mean(dim=0).detach()
