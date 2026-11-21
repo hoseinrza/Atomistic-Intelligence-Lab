@@ -37,6 +37,7 @@ import torch
 from atomistic_pinn.constants import BOP_PARAMETER_NAMES, CUTOFF_D, CUTOFF_RADIUS
 from atomistic_pinn.exceptions import DataContractError
 from atomistic_pinn.physics.neighbors import (
+    BOPNeighbors,
     build_bop_neighbors,
     neighbor_geometry,
 )
@@ -96,6 +97,7 @@ def atomic_energies(
     params: torch.Tensor,
     cutoff: float = CUTOFF_RADIUS,
     d: float = CUTOFF_D,
+    neighbors: BOPNeighbors | None = None,
 ) -> torch.Tensor:
     """Atomic energies ``E_i`` of Eq. (6) for every atom, ``(N,)``.
 
@@ -127,12 +129,13 @@ def atomic_energies(
             f"params has {params.shape[0]} rows but positions has {n_atoms} atoms"
         )
 
-    neighbors = build_bop_neighbors(
-        positions.detach().cpu().numpy(),
-        cell.detach().cpu().numpy(),
-        pbc,
-        cutoff,
-    )
+    if neighbors is None:
+        neighbors = build_bop_neighbors(
+            positions.detach().cpu().numpy(),
+            cell.detach().cpu().numpy(),
+            pbc,
+            cutoff,
+        )
     vectors, distances, bond_mask = neighbor_geometry(positions, cell, neighbors, cutoff)
 
     lam_squared = _param(params, "lambda") ** 2
@@ -174,6 +177,7 @@ def total_energy(
     params: torch.Tensor,
     cutoff: float = CUTOFF_RADIUS,
     d: float = CUTOFF_D,
+    neighbors: BOPNeighbors | None = None,
 ) -> torch.Tensor:
     """Total energy ``E = Σ_i E_i`` (scalar tensor, eV)."""
-    return atomic_energies(positions, cell, pbc, params, cutoff, d).sum()
+    return atomic_energies(positions, cell, pbc, params, cutoff, d, neighbors).sum()

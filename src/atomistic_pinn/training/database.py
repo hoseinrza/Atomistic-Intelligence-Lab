@@ -21,10 +21,11 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
-from atomistic_pinn.constants import ENERGY_SHIFT_EV_PER_ATOM
+from atomistic_pinn.constants import CUTOFF_RADIUS, ENERGY_SHIFT_EV_PER_ATOM
 from atomistic_pinn.data.schema import Dataset
 from atomistic_pinn.descriptors import DescriptorConfig, compute_structure_descriptors
 from atomistic_pinn.exceptions import DataContractError
+from atomistic_pinn.physics.neighbors import BOPNeighbors, build_bop_neighbors
 
 
 @dataclass(frozen=True)
@@ -79,6 +80,19 @@ class TrainingDatabase:
             )
             raw.append(float(structure.energy))
         self.raw_energies = np.asarray(raw, dtype=np.float64)
+        # Positions are fixed during training: the extended (2·r_c) neighbor
+        # enumeration is computed once here and reused by every objective
+        # evaluation (identical results, no rebuild cost). Positions-based
+        # vectors/distances remain differentiable per evaluation.
+        self.neighbors: list[BOPNeighbors] = [
+            build_bop_neighbors(
+                structure.positions_array,
+                structure.cell_array,
+                structure.pbc,
+                CUTOFF_RADIUS,
+            )
+            for structure in dataset.structures
+        ]
         self.energy_convention: str = dataset.metadata.energy_convention
         self.dataset_hash = _dataset_hash(dataset)
 
