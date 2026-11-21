@@ -274,7 +274,8 @@ class TestGradientRoutesAgree:
         f, grad_autograd = objective_function(
             model, db, tau=tau, tether=tether, gradient="autograd"
         )
-        assert f(x_value := (get_flat_params(model) + 0.01).numpy()) >= 0.0
+        x_value = (get_flat_params(model) + 0.01).numpy()
+        assert f(x_value) >= 0.0
         reference = self._reference_gradient(
             model, db, torch.tensor(x_value), tau=tau, tether=tether
         )
