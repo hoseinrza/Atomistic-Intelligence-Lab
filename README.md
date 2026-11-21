@@ -30,7 +30,7 @@ remains governed by physics instead of neural-network guesswork.
 | Unit conventions & data contracts | — | ✅ Sprint 0 |
 | 60-dim Legendre/Gaussian descriptors (Eqs. 3–5) | Methods | ✅ Sprint 1 |
 | Neighbor lists / PBC geometry | Methods | ✅ Sprint 1 |
-| Analytical BOP with 8 NN-predicted parameters (Eqs. 6–12) | Methods | planned — Sprint 2 |
+| Analytical BOP with 8 NN-predicted parameters (Eqs. 6–12) | Methods | ✅ Sprint 2 |
 | PINN network 60×15×15×8 + NN baseline 60×16×16×1 | Table 1 | ✅ Sprint 3 |
 | DFP optimization + random restarts + Eq. (13) objective | Methods | ✅ Sprint 3 (pipeline validated on synthetic data) |
 | 10-fold cross-validation | Methods | planned — Sprint 4 |
@@ -49,7 +49,10 @@ The paper's DFT database (3,649 training supercells / 127,592 atoms;
 downloadable** — it is available only via the paper's Supplementary
 Information tables or on request from the corresponding author. Until it is
 obtained, all training results are **methodological reproductions on
-documented alternative data**, never exact reproductions. Details and the
+documented alternative data**, never exact reproductions. The learning
+pipeline itself is validated on a **labeled synthetic database** (energies
+produced by the physics layer under known parameters — pipeline validation
+only, never presented as a reproduction result). Details and the
 acquisition plan: [data/README.md](data/README.md) and
 [docs/reproduction_protocol.md](docs/reproduction_protocol.md).
 
@@ -66,17 +69,25 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -e ".[dev]"
 ```
 
-## Usage (Sprint 0)
+## Usage
 
 ```bash
 atomistic-pinn version   # package version
 atomistic-pinn paper     # paper constants pinned in this project
+atomistic-pinn train --config configs/pinn_al.yaml
 ```
 
-`train`, `evaluate`, and `benchmark` commands arrive with Sprints 3–4:
+`train` (Sprint 3) resolves the config's ledger decisions, builds the
+database, runs the pre-fit + seeded-restart DFP training, and writes a
+provenance-complete checkpoint plus a report under `results/`. The shipped
+configs point at the labeled **synthetic** development database (pipeline
+validation — not DFT data); point `data.source` at the alternative dataset
+once acquired ([data/README.md](data/README.md)).
+
+`evaluate` and `benchmark` (cross-validation, force metrics, MD) arrive with
+Sprint 4:
 
 ```bash
-atomistic-pinn train --config configs/pinn_al.yaml
 atomistic-pinn evaluate --model checkpoints/pinn_al.pt
 atomistic-pinn benchmark --config configs/cross_validation.yaml
 ```
@@ -84,20 +95,27 @@ atomistic-pinn benchmark --config configs/cross_validation.yaml
 ## Project layout
 
 ```text
-├── configs/          experiment configurations (paper values, unknowns = null)
+├── AGENTS.md         working conventions (commit discipline, fidelity rules)
+├── configs/          experiment configurations (paper facts + labeled decisions)
 ├── data/             no datasets in git; see data/README.md
-├── docs/             scientific method, equations, architecture, protocols
+├── docs/             scientific method, equations, architecture, sprint records
 ├── src/atomistic_pinn/
 │   ├── constants.py  units + physical + paper-derived constants
 │   ├── exceptions.py error hierarchy
-│   ├── cli.py        Typer CLI
+│   ├── cli.py        Typer CLI (version, paper, train)
 │   ├── data/         schema (data contracts) + ASE converters
 │   ├── geometry/     neighbor lists (full PBC image enumeration) + angles
-│   └── descriptors/  cutoff, radial Gaussians, Legendre, 60-dim builder
+│   ├── descriptors/  cutoff, radial Gaussians, Legendre, 60-dim builder
+│   ├── physics/      BOP engine (Eqs. 6–12, torch) + FD/autograd forces
+│   ├── models/       PINN 60×15×15×8 and baseline NN 60×16×16×1 (Table 1)
+│   ├── training/     Eq. (13) objective, DFP, fixed-BOP pre-fit, trainer,
+│   │                 provenance checkpoints, config validation, synthetic DB
+│   └── reporting/    training reports (metrics + figures)
 ├── tests/
-│   ├── unit/                 constants, schema validation
-│   ├── integration/          ASE ↔ schema round trips
-│   └── scientific_validation/ paper-facts cross-checks; grows per sprint
+│   ├── unit/                 constants, schema, cutoff/Legendre, DFP, models
+│   ├── integration/          ASE ↔ schema, neighbor lists, CLI runs
+│   └── scientific_validation/ paper facts, invariances, closed forms,
+│                              independent references, training gates
 └── .github/workflows/tests.yml
 ```
 
@@ -113,7 +131,7 @@ Full module map and dependency rules: [docs/architecture.md](docs/architecture.m
 | [docs/data_format.md](docs/data_format.md) | data contracts, units, energy conventions, leakage rules |
 | [docs/reproduction_protocol.md](docs/reproduction_protocol.md) | fidelity levels, dataset plan, target metrics, reporting rules |
 | [docs/md_plan.md](docs/md_plan.md) | molecular dynamics plan (Sprint 4): force route, protocol, validation |
-| [docs/sprint0.md](docs/sprint0.md) … [docs/sprint4.md](docs/sprint4.md) | one document per sprint: delivered records (0–1), live status (2), execution plans (3–4) |
+| [docs/sprint0.md](docs/sprint0.md) … [docs/sprint4.md](docs/sprint4.md) | one document per sprint: delivered records (0–3), live plans (4) |
 
 ## Testing
 
