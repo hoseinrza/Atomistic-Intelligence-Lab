@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 import numpy as np
 import torch
 
+from atomistic_pinn.data.ani_al import dataset_from_ani_al
 from atomistic_pinn.exceptions import ConfigurationError
 from atomistic_pinn.models import PINN, BaselineNN
 from atomistic_pinn.training.config import ResolvedTrainingConfig
@@ -212,9 +213,23 @@ def build_database(resolved: ResolvedTrainingConfig) -> TrainingDatabase:
             with_periodic=resolved.data.synthetic.with_periodic,
         )
         return TrainingDatabase(dataset, resolved.descriptors.to_descriptor_config())
+    if resolved.data.source == "ani_al":
+        # config resolution enforces both (ConfigurationError at load time);
+        # the guards keep the types honest if this is called with a raw cfg.
+        if resolved.data.path is None or resolved.data.subset_size is None:
+            raise ConfigurationError(
+                "data.source='ani_al' requires data.path and data.subset_size "
+                "(data/README.md; docs/sprint3.md §6)"
+            )
+        dataset = dataset_from_ani_al(
+            resolved.data.path,
+            max_structures=resolved.data.subset_size,
+            subset_seed=resolved.data.subset_seed,
+        )
+        return TrainingDatabase(dataset, resolved.descriptors.to_descriptor_config())
     raise ConfigurationError(
-        "loading a real dataset from a path lands together with the "
-        "alternative-dataset acquisition (data/README.md); use "
-        "data.source='synthetic_bop' for pipeline validation"
+        "loading a dataset from source='path' (extxyz) lands with the Sprint "
+        "4 data work; use data.source='synthetic_bop' for pipeline validation "
+        "or data.source='ani_al' for the alternative dataset (data/README.md)"
         + (f" (requested: {resolved.data.path})" if resolved.data.path else "")
     )

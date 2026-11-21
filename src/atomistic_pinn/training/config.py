@@ -160,6 +160,11 @@ class DataCfg(BaseModel):
     source: str | None = None
     path: str | None = None
     synthetic: SyntheticCfg | None = None
+    # Development-run subset for the ANI-Al alternative dataset (labeled
+    # decision, docs/sprint3.md §6): full-database DFP with numerical
+    # gradients on CPU is documented as intractable.
+    subset_size: int | None = None
+    subset_seed: int = 0
     n_folds: int = 10
 
 
@@ -342,13 +347,28 @@ def _resolve(cfg: TrainingConfig) -> ResolvedTrainingConfig:
             raise ConfigurationError("data.path is required when source='path'")
         if not Path(data.path).exists():
             raise ConfigurationError(f"data.path does not exist: {data.path}")
+    elif data.source == "ani_al":
+        if data.path is None:
+            raise ConfigurationError(
+                "data.path is required when source='ani_al' (directory of "
+                "the extracted ANI-Al HDF5 files, data/README.md)"
+            )
+        if not Path(data.path).exists():
+            raise ConfigurationError(f"data.path does not exist: {data.path}")
+        if data.subset_size is None:
+            raise ConfigurationError(
+                "data.subset_size is required when source='ani_al': "
+                "full-database DFP with numerical gradients on CPU is "
+                "documented as intractable (docs/sprint3.md §4); a dev-run "
+                "subset is a labeled decision (docs/sprint3.md §6)"
+            )
     elif data.source == "synthetic_bop":
         if data.synthetic is None:
             raise ConfigurationError("data.synthetic is required when source='synthetic_bop'")
     else:
         raise ConfigurationError(
             f"unknown data.source {data.source!r}; supported: 'synthetic_bop', "
-            "'path' (extxyz loader lands with the real dataset)"
+            "'ani_al' (alternative dataset), 'path' (extxyz loader lands in S4)"
         )
 
     return ResolvedTrainingConfig(
