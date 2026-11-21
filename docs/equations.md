@@ -253,7 +253,19 @@ silently filled in.
    number will be chosen and documented.
 8. **DFP variant details** (line search, gradient computation): not given.
    Plan: textbook DFP with numerically computed gradients (labeled
-   implementation decision).
+   implementation decision). **UPDATE 2026-11-21 (labeled fallback, as
+   pre-authorized in `docs/sprint3.md` §4):** measured cost on the ANI-Al
+   alternative-data dev subset (16 structures, 2,048 atoms): one objective
+   evaluation ≈ 11.3 s ⇒ one numerical gradient (1,285 evaluations) ≈ 4.0 h
+   ⇒ even a 20-iteration, 2-restart run ≈ 160+ h — intractable on CPU.
+   The alternative-data dev runs therefore use **autograd gradients**
+   (`configs/*_ani.yaml`, `training.gradients: autograd`); the numerical
+   route remains the resolved §7.8 default for small databases and paper-scale
+   sanity checks. Route equivalence is validated by the scientific tests
+   (module-vs-functional energy equality, `tests/scientific_validation/
+   test_objective.py`; FD-vs-autograd force agreement, Sprint 2 gates), and
+   the measured cost is recorded in the run log. A numerical-gradient run on
+   a reduced subset stays available for cross-checking the dev-run optimum.
 9. **NN′ baseline** relies on the third-party PROPhet package and
    Behler–Parrinello symmetry functions; it will not be reproduced exactly.
    Options: skip it, or implement BP symmetry functions as an explicitly

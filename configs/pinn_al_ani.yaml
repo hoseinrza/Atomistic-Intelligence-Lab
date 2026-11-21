@@ -1,0 +1,67 @@
+# PINN-BOP development run on the ANI-Al alternative dataset (phase 3.5).
+#
+# First real-data (methodological-reproduction) run of the Sprint 3 pipeline.
+# The model/descriptor/physics sections are identical to configs/pinn_al.yaml
+# (paper facts + labeled decisions); the DATA section selects the public
+# ANI-Al database (Smith et al., Nat. Commun. 12, 92 (2021)) — see
+# data/README.md ("Alternative dataset survey and selection"). Every number
+# produced with this config is a *methodological reproduction (alternative
+# data)*, never an exact reproduction (docs/reproduction_protocol.md).
+#
+# Dev-run budget (labeled engineering decisions, docs/sprint3.md §6 — the
+# §7.7/§7.8 resolutions and the sweep plan stay unchanged):
+#   * subset_size: 16 seeded structures — full-database DFP with numerical
+#     gradients on CPU is documented as intractable (docs/sprint3.md §4);
+#   * n_random_restarts: 2 and max_iterations: 20 — first-snapshot budget;
+#     raise after the measured cost per iteration (logged in results/).
+
+experiment:
+  name: pinn_al_ani_dev
+  seed: 42 # implementation decision (paper does not publish seeds)
+  output_dir: checkpoints/
+
+model:
+  type: pinn # descriptors -> 8 BOP parameters -> BOP energy
+  architecture: [60, 15, 15, 8] # paper, Table 1 (re-validated on load)
+  n_parameters: 1283 # paper, Table 1 (recomputed on load)
+  activation: tanh # LEDGER DECISION §7.4
+  weight_init: xavier_uniform # Sprint 3 decision
+
+descriptors:
+  legendre_orders: [0, 1, 2, 4, 6] # paper, Methods Eq. (3)
+  n_radial_centers: 12 # "12 r0 values", Methods
+  sigma: 1.0 # Å, Eq. (4)
+  radial_centers: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5] # §7.1
+  cutoff_radius: 6.0 # Å, Eq. (5)
+  cutoff_d: 1.5 # Å, Eq. (5)
+  include_same_pair: true # literal Σ_{j,k} reading (§7.2)
+
+physics:
+  bop_parameters: [A, B, alpha, beta, a, h, sigma, lambda] # Methods, Eq. (6)-(12)
+
+training:
+  objective: sum_squared_total_energy_error # Eq. (13), literal reading (§7.11)
+  energy_shift_ev_per_atom: 0.38446 # applied in the pipeline, never stored
+  optimizer: dfp # Davidson-Fletcher-Powell (paper Methods)
+  n_random_restarts: 2 # DEV-RUN decision; §7.7 labeled proposal stays 5
+  regularization:
+    tau: 1.0e-4 # LEDGER DECISION §7.6 (initial values; sweep pending)
+    gamma: 1.0e-3 # LEDGER DECISION §7.6 (initial values; sweep pending)
+  forces_in_training: false # paper fact
+  # LEDGER UPDATE §7.8 (2026-11-21, labeled fallback per sprint3.md §4):
+  # measured on this subset — one objective eval ≈ 11.3 s ⇒ one numerical
+  # gradient ≈ 4.0 h (intractable); autograd gradient ≈ 45.5 s. Route
+  # equivalence is covered by the scientific tests (docs/equations.md §7.8).
+  gradients: autograd
+  line_search: backtracking_armijo # LEDGER DECISION §7.8
+  p_bar_eta: fixed_bop_prefit # LEDGER DECISION §7.13 (default option (a))
+  max_iterations: 20 # DEV-RUN snapshot budget
+  gradient_tolerance: 1.0e-8
+
+data:
+  dataset: null # original paper database — not public (data/README.md)
+  source: ani_al # alternative dataset (methodological reproduction)
+  path: data/raw/ani_al/extracted # extracted ANI-Al HDF5 archive (git-ignored)
+  subset_size: 16 # DEV-RUN labeled decision (docs/sprint3.md §6)
+  subset_seed: 42 # derived seeding discipline (architecture.md)
+  n_folds: 10 # 10-fold cross-validation (Sprint 4 wraps it around train)

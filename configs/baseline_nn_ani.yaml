@@ -1,0 +1,52 @@
+# Baseline NN development run on the ANI-Al alternative dataset (phase 3.5).
+#
+# Direct 60 -> energy regression (no BOP physics layer), isolating the
+# physics layer's effect — the paper's core comparison. Same data section
+# and dev-run budget as configs/pinn_al_ani.yaml (same subset, same seeds,
+# same split: the PINN-vs-NN comparison stays apples-to-apples).
+
+experiment:
+  name: baseline_nn_ani_dev
+  seed: 42 # implementation decision (paper does not publish seeds)
+  output_dir: checkpoints/
+
+model:
+  type: baseline_nn # descriptors -> atomic energy (direct mapping)
+  architecture: [60, 16, 16, 1] # paper, Table 1 (re-validated on load)
+  n_parameters: 1265 # paper, Table 1 (recomputed on load)
+  activation: tanh # LEDGER DECISION §7.4
+  weight_init: xavier_uniform # Sprint 3 decision
+
+descriptors:
+  legendre_orders: [0, 1, 2, 4, 6] # paper, Methods Eq. (3)
+  n_radial_centers: 12 # "12 r0 values", Methods
+  sigma: 1.0 # Å, Eq. (4)
+  radial_centers: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5] # §7.1
+  cutoff_radius: 6.0 # Å, Eq. (5)
+  cutoff_d: 1.5 # Å, Eq. (5)
+  include_same_pair: true # literal Σ_{j,k} reading (§7.2)
+
+training:
+  objective: sum_squared_total_energy_error # Eq. (13), literal reading (§7.11)
+  energy_shift_ev_per_atom: 0.38446 # applied in the pipeline, never stored
+  optimizer: dfp # Davidson-Fletcher-Powell (paper Methods)
+  n_random_restarts: 2 # DEV-RUN decision; §7.7 labeled proposal stays 5
+  regularization:
+    tau: 1.0e-4 # LEDGER DECISION §7.6 (initial values; sweep pending)
+    gamma: 0.0 # no BOP parameters in the baseline — tether does not apply
+  forces_in_training: false # paper fact
+  # LEDGER UPDATE §7.8 (2026-11-21, labeled fallback per sprint3.md §4):
+  # same measurement as configs/pinn_al_ani.yaml — numerical gradients are
+  # intractable on this subset; autograd route (docs/equations.md §7.8).
+  gradients: autograd
+  line_search: backtracking_armijo # LEDGER DECISION §7.8
+  max_iterations: 20 # DEV-RUN snapshot budget
+  gradient_tolerance: 1.0e-8
+
+data:
+  dataset: null # original paper database — not public (data/README.md)
+  source: ani_al # alternative dataset (methodological reproduction)
+  path: data/raw/ani_al/extracted # extracted ANI-Al HDF5 archive (git-ignored)
+  subset_size: 16 # DEV-RUN labeled decision (docs/sprint3.md §6)
+  subset_seed: 42 # derived seeding discipline (architecture.md)
+  n_folds: 10 # 10-fold cross-validation (Sprint 4 wraps it around train)
