@@ -4,6 +4,8 @@ Dependency rule (`docs/architecture.md`): this layer may import models,
 physics, and data — never the reverse.
 """
 
+from atomistic_pinn.evaluation.cross_validation import CVResult, run_cross_validation
+from atomistic_pinn.evaluation.folds import FoldAssignment, assign_folds
 from atomistic_pinn.evaluation.forces import (
     dataset_force_metrics,
     pipeline_forces_autograd,
@@ -25,8 +27,11 @@ from atomistic_pinn.evaluation.predict import (
 
 __all__ = [
     "FIDELITY_ALTERNATIVE_DATA",
+    "CVResult",
     "EnergyMetrics",
+    "FoldAssignment",
     "ForceMetrics",
+    "assign_folds",
     "dataset_force_metrics",
     "energy_metrics",
     "force_metrics",
@@ -36,4 +41,5 @@ __all__ = [
     "predicted_bop_parameters",
     "predicted_structure_energies",
     "restore_model",
+    "run_cross_validation",
 ]

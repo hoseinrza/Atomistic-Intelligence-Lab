@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 from atomistic_pinn.data.ani_al import dataset_from_ani_al
+from atomistic_pinn.data.schema import Dataset
 from atomistic_pinn.exceptions import ConfigurationError
 from atomistic_pinn.models import PINN, BaselineNN
 from atomistic_pinn.training.config import ResolvedTrainingConfig
@@ -208,16 +209,19 @@ def run_training(resolved: ResolvedTrainingConfig, db: TrainingDatabase) -> Trai
     )
 
 
-def build_database(resolved: ResolvedTrainingConfig) -> TrainingDatabase:
-    """Construct the training database from the resolved data section."""
+def build_dataset(resolved: ResolvedTrainingConfig) -> Dataset:
+    """Construct the dataset from the resolved data section (no caching).
+
+    Cross-validation partitions the *dataset* before any database is built;
+    ``build_database`` wraps this for single-run training.
+    """
     if resolved.data.source == "synthetic_bop":
         assert resolved.data.synthetic is not None
-        dataset = generate_synthetic_database(
+        return generate_synthetic_database(
             n_structures=resolved.data.synthetic.n_structures,
             seed=resolved.data.synthetic.seed,
             with_periodic=resolved.data.synthetic.with_periodic,
         )
-        return TrainingDatabase(dataset, resolved.descriptors.to_descriptor_config())
     if resolved.data.source == "ani_al":
         # config resolution enforces both (ConfigurationError at load time);
         # the guards keep the types honest if this is called with a raw cfg.
@@ -226,15 +230,20 @@ def build_database(resolved: ResolvedTrainingConfig) -> TrainingDatabase:
                 "data.source='ani_al' requires data.path and data.subset_size "
                 "(data/README.md; docs/sprint3.md §6)"
             )
-        dataset = dataset_from_ani_al(
+        return dataset_from_ani_al(
             resolved.data.path,
             max_structures=resolved.data.subset_size,
             subset_seed=resolved.data.subset_seed,
         )
-        return TrainingDatabase(dataset, resolved.descriptors.to_descriptor_config())
     raise ConfigurationError(
         "loading a dataset from source='path' (extxyz) lands with the Sprint "
         "4 data work; use data.source='synthetic_bop' for pipeline validation "
         "or data.source='ani_al' for the alternative dataset (data/README.md)"
         + (f" (requested: {resolved.data.path})" if resolved.data.path else "")
     )
+
+
+def build_database(resolved: ResolvedTrainingConfig) -> TrainingDatabase:
+    """Construct the training database from the resolved data section."""
+    dataset = build_dataset(resolved)
+    return TrainingDatabase(dataset, resolved.descriptors.to_descriptor_config())

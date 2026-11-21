@@ -1,28 +1,69 @@
-# 10-fold cross-validation protocol (Sprint 0 skeleton; consumed in Sprint 4).
+# 10-fold cross-validation configuration (Sprint 4).
+#
+# Replaces the Sprint 0 skeleton with the executable protocol: the paper's
+# Methods partition ("randomly partitioned in 10 subsets; one held out for
+# validation") wrapped around the Sprint 3 training driver, with
+# per-structure fold assignment (leakage rule, docs/data_format.md) and
+# derived fold seeds (docs/architecture.md).
+#
+# Model/descriptor/physics/training sections identical to
+# configs/pinn_al_ani.yaml; the cv: section carries the protocol. The dev
+# budget below (16-structure subset, autograd gradients per the labeled
+# §7.8 update, 2 folds as the machinery gate) is a labeled development
+# decision — the full 10-fold protocol runs on the owner's go.
+#
+# Fidelity: every number produced with this config is a "methodological
+# reproduction (alternative data)" (docs/reproduction_protocol.md).
 
-n_folds: 10 # paper Methods: database randomly partitioned in 10 subsets
-assignment: per_structure # leakage rule: a supercell never spans two folds
-shuffle: true
-seed: 42
+experiment:
+  name: cv_pinn_ani_dev
+  seed: 42
+  output_dir: checkpoints/
 
-models:
-  - pinn
-  - baseline_nn
-  - fixed_bop # same BOP form with parameters fitted once and fixed (paper Fig. 8)
+model:
+  type: pinn
+  architecture: [60, 15, 15, 8] # paper, Table 1
+  n_parameters: 1283 # paper, Table 1 (recomputed on load)
+  activation: tanh # LEDGER DECISION §7.4
+  weight_init: xavier_uniform # Sprint 3 decision
 
-metrics:
-  energy:
-    - rmse_mev_per_atom
-    - mae_mev_per_atom
-    - error_distribution
-  forces:
-    # Paper fact: forces are NOT used in training; they are evaluated
-    # afterwards by the finite-difference method.
-    method: finite_difference
-    quantities: [mae, rmse]
+descriptors:
+  legendre_orders: [0, 1, 2, 4, 6] # paper, Methods Eq. (3)
+  n_radial_centers: 12
+  sigma: 1.0 # Å
+  radial_centers: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5] # §7.1
+  cutoff_radius: 6.0 # Å
+  cutoff_d: 1.5 # Å
+  include_same_pair: true # §7.2
 
-reports:
-  - parity_plot_energy
-  - error_histogram
-  - per_group_errors
-  - cross_validation_summary
+physics:
+  bop_parameters: [A, B, alpha, beta, a, h, sigma, lambda]
+
+training:
+  objective: sum_squared_total_energy_error # Eq. (13), literal (§7.11)
+  energy_shift_ev_per_atom: 0.38446
+  optimizer: dfp
+  n_random_restarts: 2 # dev-run decision; §7.7 proposal stays 5
+  regularization:
+    tau: 1.0e-4 # §7.6
+    gamma: 1.0e-3 # §7.6
+  forces_in_training: false # paper fact
+  gradients: autograd # LEDGER UPDATE §7.8 (2026-11-21, measured cost)
+  line_search: backtracking_armijo
+  p_bar_eta: fixed_bop_prefit # §7.13 option (a)
+  max_iterations: 20 # dev-run budget
+  gradient_tolerance: 1.0e-8
+
+data:
+  dataset: null # original paper database — not public (data/README.md)
+  source: ani_al
+  path: data/raw/ani_al/extracted
+  subset_size: 16 # dev-run labeled decision (docs/sprint3.md §6)
+  subset_seed: 42
+  n_folds: 10 # paper protocol (informational; cv.n_folds governs the run)
+
+cv:
+  n_folds: 2 # dev gate: machinery validation; full 10-fold runs on go-ahead
+  shuffle: true # paper: "randomly partitioned"
+  seed: null # inherit experiment.seed (42)
+  max_folds: null # run all configured folds

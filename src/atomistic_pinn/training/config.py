@@ -202,6 +202,73 @@ class ResolvedTrainingConfig(BaseModel):
         return hashlib.sha256(blob).hexdigest()
 
 
+class CVSectionCfg(BaseModel):
+    """Cross-validation protocol section (Sprint 4; paper Methods).
+
+    Attributes:
+        n_folds: Number of folds K (paper: 10).
+        shuffle: Random partition of the structures (paper protocol).
+        seed: Partition master seed; None inherits ``experiment.seed``.
+        max_folds: Run only the first K' folds (development budget; None
+            runs the full protocol).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    n_folds: int = 10
+    shuffle: bool = True
+    seed: int | None = None
+    max_folds: int | None = None
+
+
+class CrossValidationConfig(BaseModel):
+    """Parsed cross-validation configuration (training config + cv section)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    experiment: ExperimentCfg
+    model: ModelCfg
+    descriptors: DescriptorCfg = DescriptorCfg()
+    physics: dict[str, object] = Field(default_factory=dict)
+    training: TrainingCfg = TrainingCfg()
+    data: DataCfg = DataCfg()
+    cv: CVSectionCfg = CVSectionCfg()
+
+
+def load_cv_config(path: str | Path) -> tuple[ResolvedTrainingConfig, CVSectionCfg]:
+    """Load and ledger-resolve a cross-validation YAML config.
+
+    Returns:
+        The resolved training configuration (one model) plus the resolved
+        CV protocol section (with the seed inherited from the experiment
+        when unset).
+
+    Raises:
+        ConfigurationError: On invalid config or unresolved ledger slots.
+    """
+    path = Path(path)
+    raw = yaml.safe_load(path.read_text())
+    if not isinstance(raw, dict):
+        raise ConfigurationError(f"config {path} must be a YAML mapping")
+    try:
+        parsed = CrossValidationConfig.model_validate(raw)
+    except Exception as error:
+        raise ConfigurationError(f"invalid configuration {path}: {error}") from error
+    training_config = TrainingConfig(
+        experiment=parsed.experiment,
+        model=parsed.model,
+        descriptors=parsed.descriptors,
+        physics=parsed.physics,
+        training=parsed.training,
+        data=parsed.data,
+    )
+    resolved = _resolve(training_config)
+    cv_section = parsed.cv
+    if cv_section.seed is None:
+        cv_section = cv_section.model_copy(update={"seed": parsed.experiment.seed})
+    return resolved, cv_section
+
+
 def load_training_config(path: str | Path) -> ResolvedTrainingConfig:
     """Load, validate, and ledger-resolve a training YAML config.
 

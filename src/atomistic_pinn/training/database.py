@@ -94,12 +94,17 @@ class TrainingDatabase:
             for structure in dataset.structures
         ]
         self.energy_convention: str = dataset.metadata.energy_convention
-        self.dataset_hash = _dataset_hash(dataset)
+        self.dataset_hash = dataset_content_hash(dataset)
 
     @property
     def n_structures(self) -> int:
         """Number of structures."""
         return len(self.geometries)
+
+    @property
+    def dataset(self) -> Dataset:
+        """The underlying dataset (provenance and force labels)."""
+        return self._dataset
 
     @property
     def is_synthetic(self) -> bool:
@@ -127,8 +132,12 @@ class TrainingDatabase:
         return np.asarray([g.n_atoms for g in self.geometries], dtype=np.float64)
 
 
-def _dataset_hash(dataset: Dataset) -> str:
-    """Deterministic SHA-256 over the dataset content (provenance)."""
+def dataset_content_hash(dataset: Dataset) -> str:
+    """Deterministic SHA-256 over the dataset content (provenance).
+
+    Public so the evaluation layer (cross-validation) records the same hash
+    as the training checkpoints.
+    """
     payload = {
         "name": dataset.metadata.name,
         "energy_convention": dataset.metadata.energy_convention,
