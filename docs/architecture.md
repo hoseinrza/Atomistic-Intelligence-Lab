@@ -20,15 +20,15 @@
 
 | Layer | Package | Contents | Sprint |
 | --- | --- | --- | --- |
-| Data | `atomistic_pinn.data` | schema (data contracts), ASE converters; loaders, HDF5 storage, splits | 0, 1, 4 |
-| Geometry | `atomistic_pinn.geometry` | neighbor lists, PBC, distances, angles | 1 |
-| Descriptors | `atomistic_pinn.descriptors` | Gaussian radial functions, Legendre polynomials, cutoff, 60-d builder | 1 |
-| Physics | `atomistic_pinn.physics` | BOP pair/bond-order/screening/promotion terms, atomic + total energy | 2 |
+| Data | `atomistic_pinn.data` | schema (data contracts), ASE converters, ANI-Al loader | ✅ 0, 1, 4 |
+| Geometry | `atomistic_pinn.geometry` | neighbor lists, PBC, distances, angles | ✅ 1 |
+| Descriptors | `atomistic_pinn.descriptors` | Gaussian radial functions, Legendre polynomials, cutoff, 60-d builder + torch twin | ✅ 1, 4 |
+| Physics | `atomistic_pinn.physics` | BOP pair/bond-order/screening/promotion terms, atomic + total energy, FD/autograd forces | ✅ 2 |
 | Learning | `atomistic_pinn.models`, `atomistic_pinn.training` | PINN + NN architectures, Eq. (13) objective, DFP, restarts, checkpoints | ✅ 3 |
-| Evaluation | `atomistic_pinn.evaluation` | energy/force metrics, cross-validation, extrapolation analysis | 4 |
-| Simulation | `atomistic_pinn.simulation` | ASE calculator, basic MD | 4 |
-| Reporting | `atomistic_pinn.reporting` | training curves, parity plots, error histograms, benchmark summaries | 3–4 |
-| Cross-cutting | `constants`, `exceptions`, `cli` | units, paper constants, error hierarchy, Typer CLI | 0+ |
+| Evaluation | `atomistic_pinn.evaluation` | energy/force metrics, pipeline FD + autograd forces, folds, cross-validation | ✅ 4 |
+| Simulation | `atomistic_pinn.simulation` | ASE calculator, NVE/NVT MD demonstration | ✅ 4 |
+| Reporting | `atomistic_pinn.reporting` | training curves, parity plots, error histograms, benchmark summaries | ✅ 3–4 |
+| Cross-cutting | `constants`, `exceptions`, `cli` | units, paper constants, error hierarchy, Typer CLI | ✅ 0+ |
 
 ## Dependency rules
 

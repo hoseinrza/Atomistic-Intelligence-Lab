@@ -9,8 +9,8 @@ the current state of the repository; update this table per sprint.
 | 0 | Project foundation: units, data contracts, CI, docs | ✅ done |
 | 1 | Geometry + descriptors (neighbor lists, PBC, 60-dim fingerprint) | ✅ done |
 | 2 | Bond-order potential physics layer (Eqs. 6–12) | ✅ done |
-| 3 | Networks + training (PINN, NN baseline, Eq. 13 objective, DFP) | ✅ done (pipeline-validated; real-data run pending dataset) |
-| 4 | Evaluation + simulation (metrics, cross-validation, forces, ASE, MD) | planned |
+| 3 | Networks + training (PINN, NN baseline, Eq. 13 objective, DFP) | ✅ done — phase 3.5/3.6 real-data runs on ANI-Al executing (labeled dev budget) |
+| 4 | Evaluation + simulation (metrics, cross-validation, forces, ASE, MD) | 🚧 in progress — 4.1 evaluation + 4.3 calculator/MD machinery complete and tested; final artifacts (dev-run metrics, τ/γ sweep, CV gate run, MD demo) executing |
 
 ---
 

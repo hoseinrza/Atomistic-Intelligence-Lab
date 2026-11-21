@@ -1,0 +1,55 @@
+# Phase 3.6 documented tau/gamma sweep (dev budget, labeled decision).
+#
+# Sprint 3 plan section 6: tune tau/gamma against the 3-4 meV/atom
+# reference band on the alternative-data development split. This mini-sweep
+# varies GAMMA with tau fixed at the initial ledger value (section 7.6);
+# the dev budget (1 restart, 10 iterations, 16-structure subset, autograd
+# per the labeled section 7.8 update) keeps each run ~25-30 min on CPU.
+# Every number is 'methodological reproduction (alternative data)'.
+
+experiment:
+  name: sweep_ani_gamma_1e-2
+  seed: 42
+  output_dir: checkpoints/
+
+model:
+  type: pinn
+  architecture: [60, 15, 15, 8]
+  n_parameters: 1283
+  activation: tanh
+  weight_init: xavier_uniform
+
+descriptors:
+  legendre_orders: [0, 1, 2, 4, 6]
+  n_radial_centers: 12
+  sigma: 1.0
+  radial_centers: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5]
+  cutoff_radius: 6.0
+  cutoff_d: 1.5
+  include_same_pair: true
+
+physics:
+  bop_parameters: [A, B, alpha, beta, a, h, sigma, lambda]
+
+training:
+  objective: sum_squared_total_energy_error
+  energy_shift_ev_per_atom: 0.38446
+  optimizer: dfp
+  n_random_restarts: 1
+  regularization:
+    tau: 1.0e-4
+    gamma: 1.0e-2
+  forces_in_training: false
+  gradients: autograd
+  line_search: backtracking_armijo
+  p_bar_eta: fixed_bop_prefit
+  max_iterations: 10
+  gradient_tolerance: 1.0e-8
+
+data:
+  dataset: null
+  source: ani_al
+  path: data/raw/ani_al/extracted
+  subset_size: 16
+  subset_seed: 42
+  n_folds: 10

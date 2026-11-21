@@ -110,14 +110,19 @@ strategy → tests. Full equations: `docs/equations.md`.
   problem; restarts reproduce results under a fixed seed; checkpoint
   round-trip restores training state bit-exactly.
 
-### 3.5 Evaluation and simulation (Sprint 4)
+### 3.5 Evaluation and simulation (Sprint 4 — ✅ machinery implemented)
 
 * Energy MAE/RMSE in meV/atom against Table 1 reference bands; force MAE/RMSE
-  by finite differences (paper's method) with autograd as a cross-check;
-  10-fold cross-validation with per-structure fold assignment; extrapolation
-  analysis on held-out structure groups; ASE calculator wiring energies and
-  (finite-difference) forces into `atoms.get_potential_energy()` and
-  `atoms.get_forces()`; a short NVE/NVT MD demonstration.
+by finite differences (paper's method, full pipeline) with autograd as a
+cross-check (torch descriptor twin; routes agree rtol 1e-4); 10-fold
+cross-validation with per-structure fold assignment and derived fold seeds
+(``evaluation/folds.py``, ``evaluation/cross_validation.py``, CLI
+``benchmark``); ASE calculator wiring energies and forces into
+`atoms.get_potential_energy()` / `atoms.get_forces()` with rebuild-on-demand
+neighbor lists (``simulation/calculator.py``); seeded NVE/NVT MD
+demonstration runners with an NVE drift gate and an extrapolation guard
+(``simulation/md.py``). Final benchmark numbers land with the running
+real-data training.
 
 ## 4. Baselines
 
