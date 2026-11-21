@@ -1,12 +1,12 @@
-# PINN-BOP training configuration for Al (Sprint 0 skeleton).
+# PINN-BOP training configuration for Al.
 #
-# Values below are paper facts from G. P. Purja Pun, R. Batra, R. Ramprasad &
-# Y. Mishin, "Physically informed artificial neural networks for atomistic
-# modeling of materials", Nature Communications 10, 2339 (2019).
-# `null` marks values the paper does NOT specify; see docs/equations.md §7
-# ("Known uncertainties"). They must not be silently filled in.
-#
-# This file is not yet consumed by code; the learning layer lands in Sprint 3.
+# Paper facts from G. P. Purja Pun, R. Batra, R. Ramprasad & Y. Mishin,
+# "Physically informed artificial neural networks for atomistic modeling of
+# materials", Nature Communications 10, 2339 (2019) are pinned and
+# re-validated by the config loader. Slots the paper does not specify carry
+# the labeled decisions of docs/sprint3.md §1 with their ledger item (§7.x);
+# nothing is filled silently. `null` slots the pipeline does NOT consume
+# (e.g. the original database label) remain null by design.
 
 experiment:
   name: pinn_al
@@ -15,9 +15,10 @@ experiment:
 
 model:
   type: pinn # descriptors -> 8 BOP parameters -> BOP energy
-  architecture: [60, 15, 15, 8] # paper, Table 1
-  n_parameters: 1283 # paper, Table 1 (used as a consistency check)
-  activation: null # UNSPECIFIED in paper
+  architecture: [60, 15, 15, 8] # paper, Table 1 (re-validated on load)
+  n_parameters: 1283 # paper, Table 1 (recomputed on load)
+  activation: tanh # LEDGER DECISION §7.4: smooth everywhere, differentiable
+  weight_init: xavier_uniform # Sprint 3 decision: seeded Xavier + zero biases
 
 descriptors:
   legendre_orders: [0, 1, 2, 4, 6] # paper, Methods Eq. (3)
@@ -34,15 +35,34 @@ physics:
   bop_parameters: [A, B, alpha, beta, a, h, sigma, lambda] # Methods, Eq. (6)-(12)
 
 training:
-  objective: sum_squared_total_energy_error # Eq. (13), literal reading
+  objective: sum_squared_total_energy_error # Eq. (13), literal reading (§7.11)
   energy_shift_ev_per_atom: 0.38446 # applied in the pipeline, never stored in data
   optimizer: dfp # Davidson-Fletcher-Powell (paper Methods)
-  n_random_restarts: null # UNSPECIFIED: paper says "several times"
+  # LEDGER DECISION §7.7: paper says "several times" — labeled proposal: 5.
+  n_random_restarts: 5
   regularization:
-    tau: null # UNSPECIFIED weight regularization strength, Eq. (13)
-    gamma: null # UNSPECIFIED parameter regularization strength, Eq. (13)
+    # LEDGER DECISION §7.6: values unpublished — initial values, tuned by the
+    # documented sweep (docs/sprint3.md §6) targeting the 3-4 meV/atom band.
+    tau: 1.0e-4
+    gamma: 1.0e-3
   forces_in_training: false # paper fact: forces are NOT trained or validated
+  # LEDGER DECISION §7.8: textbook DFP, numerical gradients, Armijo line
+  # search. 'autograd' is the labeled fallback for intractable cost.
+  gradients: numerical
+  line_search: backtracking_armijo
+  # LEDGER DECISION §7.13: p̄_η = parameters of the pre-fitted fixed BOP
+  # (option (a), docs/sprint3.md §3.2a) — also delivers the fixed-BOP
+  # baseline (Fig. 8 re-fit, never the paper's fit: §7.15).
+  p_bar_eta: fixed_bop_prefit
+  max_iterations: 100
+  gradient_tolerance: 1.0e-8
 
 data:
-  dataset: null # original database not public; see data/README.md
-  n_folds: 10 # 10-fold cross-validation (paper Methods)
+  dataset: null # original paper database — not public (data/README.md)
+  # Labeled development stand-in for pipeline validation (NOT DFT data):
+  source: synthetic_bop
+  synthetic:
+    n_structures: 24
+    seed: 7
+  path: null # extxyz path for the alternative dataset (loader lands in S4)
+  n_folds: 10 # 10-fold cross-validation (Sprint 4 wraps it around train)

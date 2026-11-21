@@ -1,10 +1,9 @@
-# Conventional NN baseline configuration (Sprint 0 skeleton).
+# Conventional NN baseline configuration (Sprint 3).
 #
 # The baseline NN directly maps the 60 descriptors to the atomic energy,
-# bypassing the BOP physics layer. Values are paper facts; `null` marks
-# values the paper does not specify (docs/equations.md §7).
-#
-# This file is not yet consumed by code; the learning layer lands in Sprint 3.
+# bypassing the BOP physics layer, isolating its effect (paper Table 1).
+# Same conventions as configs/pinn_al.yaml; the γ tether does not apply
+# (no BOP parameters) and is forced to 0.0.
 
 experiment:
   name: baseline_nn
@@ -13,30 +12,40 @@ experiment:
 
 model:
   type: baseline_nn # descriptors -> atomic energy (direct mapping)
-  architecture: [60, 16, 16, 1] # paper, Table 1
-  n_parameters: 1265 # paper, Table 1 (used as a consistency check)
-  activation: null # UNSPECIFIED in paper
+  architecture: [60, 16, 16, 1] # paper, Table 1 (re-validated on load)
+  n_parameters: 1265 # paper, Table 1 (recomputed on load)
+  activation: tanh # LEDGER DECISION §7.4
+  weight_init: xavier_uniform # Sprint 3 decision
 
 descriptors:
   legendre_orders: [0, 1, 2, 4, 6]
   n_radial_centers: 12
   sigma: 1.0 # Å
-  # IMPLEMENTATION DECISION (paper unspecified), see docs/equations.md §7.1.
+  # IMPLEMENTATION DECISION (paper unspecified), docs/equations.md §7.1.
   radial_centers: [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5]
   cutoff_radius: 6.0 # Å
   cutoff_d: 1.5 # Å
   include_same_pair: true # literal Σ_{j,k} reading, Eq. (3)
 
 training:
-  objective: sum_squared_total_energy_error # Eq. (13), literal reading
+  objective: sum_squared_total_energy_error # Eq. (13), literal reading (§7.11)
   energy_shift_ev_per_atom: 0.38446
   optimizer: dfp # Davidson-Fletcher-Powell (paper Methods)
-  n_random_restarts: null # UNSPECIFIED
+  n_random_restarts: 5 # LEDGER DECISION §7.7
   regularization:
-    tau: null # UNSPECIFIED
-    gamma: null # UNSPECIFIED
+    tau: 1.0e-4 # LEDGER DECISION §7.6 (tuned by documented sweep)
+    gamma: 0.0 # no BOP parameters in the baseline — tether does not apply
   forces_in_training: false # paper fact
+  gradients: numerical # LEDGER DECISION §7.8
+  line_search: backtracking_armijo # LEDGER DECISION §7.8
+  max_iterations: 100
+  gradient_tolerance: 1.0e-8
 
 data:
-  dataset: null # original database not public; see data/README.md
+  dataset: null # original paper database — not public (data/README.md)
+  source: synthetic_bop # labeled development stand-in (pipeline validation)
+  synthetic:
+    n_structures: 24
+    seed: 7
+  path: null # extxyz path for the alternative dataset (loader lands in S4)
   n_folds: 10
