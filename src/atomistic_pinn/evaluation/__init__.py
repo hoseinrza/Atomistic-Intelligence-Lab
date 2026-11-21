@@ -6,6 +6,7 @@ physics, and data — never the reverse.
 
 from atomistic_pinn.evaluation.forces import (
     dataset_force_metrics,
+    pipeline_forces_autograd,
     pipeline_forces_finite_difference,
 )
 from atomistic_pinn.evaluation.metrics import (
@@ -30,6 +31,7 @@ __all__ = [
     "energy_metrics",
     "force_metrics",
     "per_atom_energy_errors",
+    "pipeline_forces_autograd",
     "pipeline_forces_finite_difference",
     "predicted_bop_parameters",
     "predicted_structure_energies",

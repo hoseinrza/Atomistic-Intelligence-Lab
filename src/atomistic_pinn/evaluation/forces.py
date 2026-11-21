@@ -25,8 +25,13 @@ from numpy.typing import NDArray
 from atomistic_pinn.constants import CUTOFF_D, CUTOFF_RADIUS
 from atomistic_pinn.data.schema import AtomicStructure
 from atomistic_pinn.descriptors import DescriptorConfig, compute_descriptors
+from atomistic_pinn.descriptors.torch_builder import (
+    build_descriptor_neighbors,
+    compute_descriptors_differentiable,
+)
 from atomistic_pinn.evaluation.metrics import ForceMetrics, force_metrics
 from atomistic_pinn.physics.bop import total_energy
+from atomistic_pinn.physics.neighbors import build_bop_neighbors
 from atomistic_pinn.training.objective import BaselineEnergyModel, PINNEnergyModel
 
 
@@ -123,3 +128,39 @@ def dataset_force_metrics(
     predicted = np.concatenate(predicted_blocks, axis=0)
     reference = np.concatenate(reference_blocks, axis=0)
     return force_metrics(predicted, reference, n_structures=len(labeled))
+
+
+def pipeline_forces_autograd(
+    model: PINNEnergyModel,
+    positions: NDArray[np.float64] | torch.Tensor,
+    cell: NDArray[np.float64] | torch.Tensor,
+    pbc: list[bool] | tuple[bool, ...],
+    descriptor_config: DescriptorConfig | None = None,
+) -> torch.Tensor:
+    """Full-pipeline forces by reverse-mode autograd, ``(N, 3)`` in eV/Å.
+
+    The gradient of the total energy flows through the *whole* chain —
+    descriptors (torch twin, fixed padded neighbor list), network, BOP —
+    back to the positions. This is the engineering route used by the ASE
+    calculator for dynamics (`docs/md_plan.md` §2); agreement with
+    :func:`pipeline_forces_finite_difference` is a scientific test.
+    """
+    cfg = descriptor_config or DescriptorConfig()
+    positions_np = np.asarray(
+        positions.detach().numpy() if isinstance(positions, torch.Tensor) else positions,
+        dtype=np.float64,
+    )
+    cell_np = np.asarray(cell.detach().numpy() if isinstance(cell, torch.Tensor) else cell)
+    # Fixed lists: descriptor slots at r_c, BOP screening slots at 2·r_c.
+    descriptor_neighbors = build_descriptor_neighbors(positions_np, cell_np, pbc, cfg.cutoff_radius)
+    bop_neighbors = build_bop_neighbors(positions_np, cell_np, pbc, CUTOFF_RADIUS)
+
+    pos = torch.as_tensor(positions_np, dtype=torch.float64).requires_grad_(True)
+    cell_t = torch.as_tensor(cell_np, dtype=torch.float64)
+    descriptors = compute_descriptors_differentiable(pos, cell_t, descriptor_neighbors, cfg)
+    params = model.network(descriptors)
+    energy = total_energy(
+        pos, cell_t, pbc, params, cutoff=CUTOFF_RADIUS, d=CUTOFF_D, neighbors=bop_neighbors
+    )
+    (grad,) = torch.autograd.grad(energy, pos)
+    return torch.nan_to_num(-grad, nan=0.0, posinf=0.0, neginf=0.0)
