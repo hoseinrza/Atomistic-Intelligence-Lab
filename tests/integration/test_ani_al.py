@@ -1,9 +1,10 @@
 """Integration tests for the ANI-Al alternative-dataset loader.
 
-The fixture reproduces the ANI-Al HDF5 layout (``data-*.h5`` files with
-per-group ``species`` / ``coordinates`` / ``cell`` / ``energy`` / ``force``
-blocks) on tiny synthetic data — no external dataset is downloaded by the
-test suite. Provenance and selection rules: ``data/README.md``.
+The ``ani_dir`` fixture (shared via ``conftest.py``) reproduces the ANI-Al
+HDF5 layout (``data-*.h5`` files with per-group ``species`` / ``coordinates``
+/ ``cell`` / ``energy`` / ``force`` blocks) on tiny synthetic data — no
+external dataset is downloaded by the test suite. Provenance and selection
+rules: ``data/README.md``.
 """
 
 from __future__ import annotations
@@ -24,32 +25,6 @@ pytestmark = pytest.mark.integration
 
 N_ATOMS = 4
 N_CONF = 2
-
-
-def _write_group(handle: h5py.File, key: str, rng: np.random.Generator, cell: np.ndarray) -> None:
-    """One ANI batch group: N_CONF periodic N_ATOMS-atom Al configurations."""
-    group = handle.create_group(key)
-    group.create_dataset("species", data=np.full(N_ATOMS, b"Al", dtype="|S2"))
-    group.create_dataset("coordinates", data=rng.uniform(0.0, 4.0, size=(N_CONF, N_ATOMS, 3)))
-    group.create_dataset("cell", data=np.broadcast_to(cell, (N_CONF, 3, 3)).copy())
-    group.create_dataset("energy", data=rng.uniform(-12.0, -10.0, size=N_CONF))
-    group.create_dataset("force", data=rng.normal(0.0, 0.1, size=(N_CONF, N_ATOMS, 3)))
-    group.create_dataset(
-        "Jnames",
-        data=np.array([f"/fake/qm/out-{key}-{c}.h5" for c in range(N_CONF)], dtype="|S64"),
-    )
-
-
-@pytest.fixture
-def ani_dir(tmp_path: Path) -> Path:
-    """Two ANI-style HDF5 files, two groups each (8 structures total)."""
-    rng = np.random.default_rng(11)
-    cell = 8.0 * np.eye(3)
-    for name in ("data-1.h5", "data-2.h5"):
-        with h5py.File(tmp_path / name, "w") as handle:
-            _write_group(handle, "0", rng, cell)
-            _write_group(handle, "1", rng, cell)
-    return tmp_path
 
 
 class TestConverter:
