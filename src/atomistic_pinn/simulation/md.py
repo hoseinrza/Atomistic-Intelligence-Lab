@@ -28,6 +28,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from ase import Atoms, units
+from ase.io import write
 from ase.md.langevin import Langevin
 from ase.md.md import MolecularDynamics
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary
@@ -140,12 +141,16 @@ def run_nve(
     temperature_k: float = 300.0,
     seed: int = 0,
     log_interval: int = DEFAULT_LOG_INTERVAL_STEPS,
+    trajectory_path: str | None = None,
 ) -> MDResult:
     """Stage B — microcanonical demonstration (the drift gate)."""
     atoms.calc = calculator
     _seed_velocities(atoms, temperature_k, seed)
     times, totals, potentials, temperatures, min_n, mean_n = _collect_frames(
-        VelocityVerlet(atoms, timestep_fs * units.fs), n_steps, log_interval
+        VelocityVerlet(atoms, timestep_fs * units.fs),
+        n_steps,
+        log_interval,
+        trajectory_path,
     )
     drift = float(totals[-1] - totals[0])
     reference = float(abs(totals[0])) or 1.0
@@ -175,6 +180,7 @@ def run_nvt_langevin(
     friction_fs_inv: float = 0.02,
     seed: int = 0,
     log_interval: int = DEFAULT_LOG_INTERVAL_STEPS,
+    trajectory_path: str | None = None,
 ) -> MDResult:
     """Stage C — canonical demonstration (seeded Langevin thermostat)."""
     atoms.calc = calculator
@@ -187,7 +193,7 @@ def run_nvt_langevin(
         rng=np.random.default_rng(seed),
     )
     times, totals, potentials, temperatures, min_n, mean_n = _collect_frames(
-        dynamics, n_steps, log_interval
+        dynamics, n_steps, log_interval, trajectory_path
     )
     drift = float(totals[-1] - totals[0])
     reference = float(abs(totals[0])) or 1.0
@@ -208,9 +214,17 @@ def run_nvt_langevin(
 
 
 def _collect_frames(
-    dynamics: MolecularDynamics, n_steps: int, log_interval: int
+    dynamics: MolecularDynamics,
+    n_steps: int,
+    log_interval: int,
+    trajectory_path: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Run ``n_steps`` and log frames every ``log_interval`` steps."""
+    """Run ``n_steps`` and log frames every ``log_interval`` steps.
+
+    When ``trajectory_path`` is given, every logged frame is appended to an
+    ASE extxyz trajectory alongside the scalar record (generated artifact —
+    never committed).
+    """
     atoms = dynamics.atoms
     cutoff = CUTOFF_RADIUS
     times, totals, potentials, temperatures, min_n, mean_n = [], [], [], [], [], []
@@ -223,6 +237,8 @@ def _collect_frames(
         temperatures.append(temp)
         min_n.append(n_min)
         mean_n.append(n_mean)
+        if trajectory_path is not None:
+            write(trajectory_path, atoms, format="extxyz", append=True)
 
     log()
     steps_done = 0

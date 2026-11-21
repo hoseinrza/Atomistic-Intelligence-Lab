@@ -1,0 +1,33 @@
+# Molecular-dynamics demonstration protocol (Sprint 4; docs/md_plan.md section 4).
+#
+# The paper's thermostat, timestep, run lengths, and force route during MD
+# trajectories are NOT stated in the main text (equations.md section 7 item 12);
+# every value below is a LABELED ENGINEERING DECISION following the proposed
+# defaults of docs/md_plan.md section 4. MD is a demonstration of usability and
+# short-time stability — no paper metric is claimed from it. Forces use the
+# autograd route (validated against the paper-faithful finite differences on
+# static configurations); training remains energy-only regardless.
+
+system:
+  structure: fcc_al # ideal FCC aluminum supercell
+  conventional_cells: 5 # 5x5x5 conventional cells = 500 atoms (stage B/C spec)
+  lattice_parameter_a: 4.05 # A - engineering value; re-derive from the trained potential
+
+nve: # stage B - the strongest correctness gate: total-energy drift
+  timestep_fs: 1.0
+  steps: 10000 # ~10 ps
+  temperature_k: 300.0 # Maxwell-Boltzmann init, zero net momentum
+  seed: 42
+
+nvt: # stage C - temperature stability and usable trajectory
+  thermostat: langevin # seeded noise (reproducible under the seed)
+  timestep_fs: 1.0
+  steps: 5000 # ~5 ps
+  temperature_k: 300.0
+  friction_fs_inv: 0.02
+  seed: 42
+
+logging:
+  interval_steps: 100 # per-frame energy/temperature/neighbor record + trajectory frame
+
+output_dir: results/md_demo # generated artifacts, never committed
