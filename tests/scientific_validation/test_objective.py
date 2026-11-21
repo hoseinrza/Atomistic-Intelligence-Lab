@@ -20,6 +20,7 @@ from atomistic_pinn.training.objective import (
     BaselineEnergyModel,
     PINNEnergyModel,
     TetherConfig,
+    _flat_to_named,
     get_flat_params,
     objective_value,
     set_flat_params,
@@ -218,3 +219,104 @@ def test_set_flat_params_round_trip(db) -> None:
     perturbed = x + 0.01
     set_flat_params(model, perturbed)
     np.testing.assert_array_equal(get_flat_params(model).numpy(), perturbed.numpy())
+
+
+class TestGradientRoutesAgree:
+    """The streaming autograd gradient equals the all-at-once reference.
+
+    The autograd route (labeled §7.8 fallback, used by the real-data runs)
+    accumulates per-structure gradients with immediate backward passes to
+    cap peak memory; this pins it against the all-at-once graph on the small
+    synthetic database — including the τ term, which must flow through the
+    leaf-connected parameters (the module-based τ gradient is zero and was
+    the pre-fix behaviour).
+    """
+
+    @staticmethod
+    def _reference_gradient(
+        model: PINNEnergyModel | BaselineEnergyModel,
+        db: TrainingDatabase,
+        x: torch.Tensor,
+        tau: float,
+        tether: TetherConfig | None,
+    ) -> torch.Tensor:
+        leaf = x.clone().requires_grad_(True)
+        named = _flat_to_named(model, leaf)
+        targets = torch.as_tensor(db.shifted_targets(), dtype=torch.float64)
+        energies = model.structure_energies_functional(named, db)
+        loss = ((energies - targets) ** 2).sum()
+        if tau > 0.0:
+            reg = sum((p**2).sum() for p in named.values())
+            loss = loss + tau * reg
+        if tether is not None and tether.gamma > 0.0:
+            predictions = model.predicted_parameters(db, named_params=named)
+            assert predictions is not None
+            if tether.mode == "fixed_bop_prefit":
+                assert tether.target is not None
+                loss = loss + tether.gamma * ((predictions - tether.target) ** 2).sum()
+            else:  # self_mean
+                mean = predictions.mean(dim=0).detach()
+                loss = loss + tether.gamma * ((predictions - mean) ** 2).sum()
+        (g,) = torch.autograd.grad(loss, leaf)
+        return g
+
+    def test_streaming_matches_all_at_once_with_tau_and_tether(self, db) -> None:
+        from atomistic_pinn.training.objective import objective_function
+
+        model = PINNEnergyModel(PINN(seed=2))
+        tau, gamma = 0.05, 1e-3
+        prefit = np.array([1.0, 1.0, 2.0, 3.0, 1.0, 0.0, 1.0, 1.0])
+        tether = TetherConfig(
+            gamma=gamma,
+            mode="fixed_bop_prefit",
+            target=torch.tensor(prefit, dtype=torch.float64),
+        )
+        f, grad_autograd = objective_function(
+            model, db, tau=tau, tether=tether, gradient="autograd"
+        )
+        assert f(x_value := (get_flat_params(model) + 0.01).numpy()) >= 0.0
+        reference = self._reference_gradient(
+            model, db, torch.tensor(x_value), tau=tau, tether=tether
+        )
+        np.testing.assert_allclose(grad_autograd(x_value), reference.numpy(), rtol=1e-12)
+
+    def test_tau_gradient_flows_through_leaf(self, db) -> None:
+        # Regression: the τ gradient must be non-zero (the module-based
+        # formulation contributed exactly zero through the leaf).
+        from atomistic_pinn.training.objective import (
+            _flat_to_named,
+            _weight_regularization,
+            objective_function,
+        )
+
+        model = PINNEnergyModel(PINN(seed=2))
+        tau = 0.05
+        _, grad_autograd = objective_function(model, db, tau=tau, tether=None, gradient="autograd")
+        x = (get_flat_params(model) + 0.01).numpy()
+        assert np.abs(grad_autograd(x)).max() > 0.0
+        # And explicitly: the module-based τ term contributes zero to dℰ/dx.
+        leaf = torch.tensor(x, requires_grad=True)
+        named = _flat_to_named(model, leaf)
+        targets = torch.as_tensor(db.shifted_targets(), dtype=torch.float64)
+        energies = model.structure_energies_functional(named, db)
+        energy_loss = ((energies - targets) ** 2).sum() + tau * _weight_regularization(model)
+        (g_module_tau,) = torch.autograd.grad(energy_loss, leaf)
+        # Streaming gradient minus its own τ contribution == module-tau one
+        # iff the module-based τ gradient is zero: compare against the
+        # energy-only streaming gradient + 0.
+        _, grad_energy_only = objective_function(
+            model, db, tau=0.0, tether=None, gradient="autograd"
+        )
+        np.testing.assert_allclose(g_module_tau.detach().numpy(), grad_energy_only(x), rtol=1e-10)
+
+    def test_streaming_matches_all_at_once_baseline(self, db) -> None:
+        from atomistic_pinn.training.objective import objective_function
+
+        model = BaselineEnergyModel(BaselineNN(seed=2))
+        f, grad_autograd = objective_function(model, db, tau=0.02, tether=None, gradient="autograd")
+        x_value = (get_flat_params(model) + 0.01).numpy()
+        assert f(x_value) >= 0.0
+        reference = self._reference_gradient(
+            model, db, torch.tensor(x_value), tau=0.02, tether=None
+        )
+        np.testing.assert_allclose(grad_autograd(x_value), reference.numpy(), rtol=1e-12)

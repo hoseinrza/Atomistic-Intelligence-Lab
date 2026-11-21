@@ -102,11 +102,19 @@ def _make_objective(
     def grad(x: np.ndarray) -> np.ndarray:
         x = np.asarray(x, dtype=np.float64)
         if gradient == "autograd":
+            # Streaming accumulation: each structure's BOP graph is built
+            # and immediately backward-ed (peak memory = one structure's
+            # intermediates; the stacked variant retained every structure's
+            # graph simultaneously and exhausted memory on real datasets).
             leaf = torch.tensor(x, dtype=torch.float64, requires_grad=True)
-            values = energies_tensor(leaf)
-            loss = ((values - targets) ** 2).sum()
-            (autograd_grad,) = torch.autograd.grad(loss, leaf)
-            return autograd_grad.numpy()
+            for k, geometry in enumerate(db.geometries):
+                per_atom = leaf.unsqueeze(0).expand(geometry.n_atoms, -1)
+                energy = atomic_energies(
+                    geometry.positions, geometry.cell, geometry.pbc, per_atom
+                ).sum()
+                ((energy - targets[k]) ** 2).backward()
+            assert leaf.grad is not None  # at least one backward ran
+            return leaf.grad.numpy()
         eps = np.sqrt(np.finfo(np.float64).eps)
         grad_values = np.empty_like(x)
         f0 = f(x)

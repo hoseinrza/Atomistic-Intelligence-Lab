@@ -39,7 +39,7 @@ from torch import nn
 
 from atomistic_pinn.models import PINN, BaselineNN
 from atomistic_pinn.physics import total_energy
-from atomistic_pinn.training.database import TrainingDatabase
+from atomistic_pinn.training.database import StructureGeometry, TrainingDatabase
 
 _DIFFERENTIAL_STEP = math.sqrt(np.finfo(np.float64).eps)
 
@@ -74,11 +74,25 @@ class PINNEnergyModel:
         route through a flat vector)."""
         outputs = []
         for geometry, desc in zip(db.geometries, db.descriptors, strict=True):
-            params = torch.func.functional_call(
-                self.network, named_params, (torch.as_tensor(desc, dtype=torch.float64),)
-            )
-            outputs.append(total_energy(geometry.positions, geometry.cell, geometry.pbc, params))
+            outputs.append(self.structure_energy_functional(named_params, geometry, desc))
         return torch.stack(outputs)
+
+    def structure_energy_functional(
+        self,
+        named_params: dict[str, torch.Tensor],
+        geometry: StructureGeometry,
+        desc: np.ndarray,
+    ) -> torch.Tensor:
+        """Total energy of ONE structure from functional parameters (eV).
+
+        The per-structure entry point used by the streaming autograd
+        gradient: the caller builds and frees one structure's graph at a
+        time instead of retaining every structure's graph simultaneously.
+        """
+        params = torch.func.functional_call(
+            self.network, named_params, (torch.as_tensor(desc, dtype=torch.float64),)
+        )
+        return total_energy(geometry.positions, geometry.cell, geometry.pbc, params)
 
     def predicted_parameters(
         self, db: TrainingDatabase, named_params: dict[str, torch.Tensor] | None = None
@@ -114,12 +128,21 @@ class BaselineEnergyModel:
         self, named_params: dict[str, torch.Tensor], db: TrainingDatabase
     ) -> torch.Tensor:
         outputs = []
-        for desc in db.descriptors:
-            atomic = torch.func.functional_call(
-                self.network, named_params, (torch.as_tensor(desc, dtype=torch.float64),)
-            )
-            outputs.append(atomic.sum())
+        for geometry, desc in zip(db.geometries, db.descriptors, strict=True):
+            outputs.append(self.structure_energy_functional(named_params, geometry, desc))
         return torch.stack(outputs)
+
+    def structure_energy_functional(
+        self,
+        named_params: dict[str, torch.Tensor],
+        geometry: StructureGeometry,
+        desc: np.ndarray,
+    ) -> torch.Tensor:
+        """Total energy of ONE structure from functional parameters (eV)."""
+        atomic = torch.func.functional_call(
+            self.network, named_params, (torch.as_tensor(desc, dtype=torch.float64),)
+        )
+        return atomic.sum()
 
     def predicted_parameters(
         self, db: TrainingDatabase, named_params: dict[str, torch.Tensor] | None = None
@@ -249,10 +272,45 @@ def objective_function(
         return float(value)
 
     def grad_autograd(x: np.ndarray) -> np.ndarray:
+        # Streaming accumulation: each structure's graph is built and
+        # immediately backward-ed, so peak memory holds ONE structure's BOP
+        # intermediates instead of every structure's graph at once (the
+        # all-at-once variant exhausted memory on real datasets).
+        #
+        # The τ term is computed through the leaf-connected `named` tensors:
+        # `_weight_regularization` reads module parameters, which do not
+        # trace to the leaf, so the module-based τ gradient would be zero.
         leaf = torch.tensor(x, dtype=torch.float64, requires_grad=True)
-        value = objective_value(model, db, leaf, tau=tau, tether=tether)
-        (g,) = torch.autograd.grad(value, leaf)
-        return g.numpy()
+        named = _flat_to_named(model, leaf)
+        targets = torch.as_tensor(db.shifted_targets(), dtype=torch.float64)
+        for k, (geometry, desc) in enumerate(zip(db.geometries, db.descriptors, strict=True)):
+            energy = model.structure_energy_functional(named, geometry, desc)
+            ((energy - targets[k]) ** 2).backward()
+        if tau > 0.0:
+            reg = torch.zeros((), dtype=torch.float64)
+            for p in named.values():
+                reg = reg + (p**2).sum()
+            (tau * reg).backward()
+        if tether is not None and tether.gamma > 0.0:
+            predictions = model.predicted_parameters(db, named_params=named)
+            if predictions is None:
+                raise ValueError(
+                    "the γ tether requires predicted BOP parameters; the "
+                    "baseline model has none (its γ is forced to 0)"
+                )
+            if tether.mode == "fixed_bop_prefit":
+                target = tether.target
+                if target is None:
+                    raise ValueError("fixed_bop_prefit tether requires the (8,) target")
+                tether_term = ((predictions - target) ** 2).sum()
+            elif tether.mode == "self_mean":
+                mean = predictions.mean(dim=0).detach()  # constant within the pass
+                tether_term = ((predictions - mean) ** 2).sum()
+            else:
+                raise ValueError(f"unknown tether mode {tether.mode!r}")
+            (tether.gamma * tether_term).backward()
+        assert leaf.grad is not None  # at least one backward ran
+        return leaf.grad.numpy()
 
     def grad_numerical(x: np.ndarray) -> np.ndarray:
         x = np.asarray(x, dtype=np.float64)
