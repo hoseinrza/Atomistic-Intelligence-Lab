@@ -9,7 +9,9 @@ Wires energies and forces into the standard ASE workflow
 * **Forces (autograd route — the MD force route)** — the gradient of the
   total energy through the whole chain, with the neighbor metadata built
   once and **held fixed** while the gradient flows; the C³-smooth cutoff is
-  what makes this well-defined across ``r_c``.
+  what makes this well-defined across ``r_c``. On this route energy and
+  forces come from **one differentiable pass** (ASE requests both on every
+  MD step; the energy value is read from the same graph).
 * **Rebuild-on-demand** — the fixed lists are rebuilt when any atom has
   moved more than ``rebuild_threshold`` from the positions they were built
   at (the calculator tracks the maximum displacement between calls). The
@@ -163,13 +165,15 @@ class PINNCalculator(Calculator):
         self._cell = cell
         self._pbc = pbc
 
-        energy = self._pipeline_energy(positions, cell, pbc)
+        if self._force_method == "autograd":
+            # ASE asks for energy and forces together on every MD step;
+            # one differentiable pass serves both results.
+            energy, forces = self._pipeline_energy_and_forces_autograd(positions, cell, pbc)
+        else:
+            energy = self._pipeline_energy(positions, cell, pbc)
+            forces = self._pipeline_forces_finite_difference(positions, cell, pbc)
         self.results["energy"] = float(energy)
         self.results["free_energy"] = float(energy)
-        if self._force_method == "autograd":
-            forces = self._pipeline_forces_autograd(positions, cell, pbc)
-        else:
-            forces = self._pipeline_forces_finite_difference(positions, cell, pbc)
         self.results["forces"] = forces
 
     # -- pipeline pieces ---------------------------------------------------
@@ -180,6 +184,8 @@ class PINNCalculator(Calculator):
         cell: np.ndarray,
         pbc: tuple[bool, bool, bool],
     ) -> float:
+        """Energy without an autograd graph (static evaluation and the
+        finite-difference force route, which displaces positions)."""
         pos = torch.as_tensor(positions, dtype=torch.float64)
         cell_t = torch.as_tensor(cell, dtype=torch.float64)
         self._ensure_neighbor_metadata(positions, cell, pbc)
@@ -200,12 +206,19 @@ class PINNCalculator(Calculator):
         )
         return float(energy.detach())
 
-    def _pipeline_forces_autograd(
+    def _pipeline_energy_and_forces_autograd(
         self,
         positions: np.ndarray,
         cell: np.ndarray,
         pbc: tuple[bool, bool, bool],
-    ) -> np.ndarray:
+    ) -> tuple[float, np.ndarray]:
+        """Energy and forces through ONE differentiable pass (MD route).
+
+        The energy value is read from the same graph the forces are
+        differentiated from — identical to a separate no-grad energy
+        evaluation (same kernels, deterministic), at half the pipeline
+        cost per MD step.
+        """
         self._ensure_neighbor_metadata(positions, cell, pbc)
         assert self._cached_descriptor_neighbors is not None
         assert self._cached_bop_neighbors is not None
@@ -226,7 +239,7 @@ class PINNCalculator(Calculator):
         )
         (grad,) = torch.autograd.grad(energy, pos)
         forces = torch.nan_to_num(-grad, nan=0.0, posinf=0.0, neginf=0.0)
-        return forces.detach().numpy()
+        return float(energy.detach()), forces.detach().numpy()
 
     def _pipeline_forces_finite_difference(
         self,
