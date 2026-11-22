@@ -88,6 +88,14 @@ class PINNEnergyModel:
             outputs.append(self.structure_energy_functional(named_params, geometry, desc, neighbor))
         return torch.stack(outputs)
 
+    def _params_functional(
+        self, named_params: dict[str, torch.Tensor], desc: np.ndarray
+    ) -> torch.Tensor:
+        """Network forward with functionally supplied parameters."""
+        return torch.func.functional_call(
+            self.network, named_params, (torch.as_tensor(desc, dtype=torch.float64),)
+        )
+
     def structure_energy_functional(
         self,
         named_params: dict[str, torch.Tensor],
@@ -106,12 +114,35 @@ class PINNEnergyModel:
         rebuild; positions are fixed during training so the list is
         identical to the one rebuilt on the fly.
         """
-        params = torch.func.functional_call(
-            self.network, named_params, (torch.as_tensor(desc, dtype=torch.float64),)
-        )
+        params = self._params_functional(named_params, desc)
         return total_energy(
             geometry.positions, geometry.cell, geometry.pbc, params, neighbors=neighbor
         )
+
+    def structure_energies_and_parameters(
+        self, named_params: dict[str, torch.Tensor], db: TrainingDatabase
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Per-structure energies ``(S,)`` and stacked BOP parameters
+        ``(Σ N_s, 8)`` in ONE network forward per structure.
+
+        The γ tether needs the same parameters the energy pass already
+        produces; sharing the forward halves the network cost of every
+        evaluation with γ > 0 (the parameters are identical to a second
+        :meth:`predicted_parameters` pass — the forward is deterministic).
+        """
+        energies = []
+        rows = []
+        for geometry, desc, neighbor in zip(
+            db.geometries, db.descriptors, db.neighbors, strict=True
+        ):
+            params = self._params_functional(named_params, desc)
+            energies.append(
+                total_energy(
+                    geometry.positions, geometry.cell, geometry.pbc, params, neighbors=neighbor
+                )
+            )
+            rows.append(params)
+        return torch.stack(energies), torch.cat(rows, dim=0)
 
     def predicted_parameters(
         self, db: TrainingDatabase, named_params: dict[str, torch.Tensor] | None = None
@@ -167,6 +198,18 @@ class BaselineEnergyModel:
             self.network, named_params, (torch.as_tensor(desc, dtype=torch.float64),)
         )
         return atomic.sum()
+
+    def structure_energies_and_parameters(
+        self, named_params: dict[str, torch.Tensor], db: TrainingDatabase
+    ) -> tuple[torch.Tensor, None]:
+        """Per-structure energies ``(S,)`` in one functional pass; the
+        second return value is ``None`` — the baseline has no BOP
+        parameters, so there is nothing for the γ tether (signature
+        symmetry with :class:`PINNEnergyModel`)."""
+        energies = []
+        for geometry, desc in zip(db.geometries, db.descriptors, strict=True):
+            energies.append(self.structure_energy_functional(named_params, geometry, desc))
+        return torch.stack(energies), None
 
     def predicted_parameters(
         self, db: TrainingDatabase, named_params: dict[str, torch.Tensor] | None = None
@@ -242,12 +285,11 @@ def objective_value(
     """
     x = x.to(torch.float64)
     named = _flat_to_named(model, x)
-    energies = model.structure_energies_functional(named, db)
+    energies, predictions = model.structure_energies_and_parameters(named, db)
     targets = torch.as_tensor(db.shifted_targets(), dtype=torch.float64)
     energy_term = ((energies - targets) ** 2).sum()
     total = energy_term + tau * _weight_regularization(model)
     if tether is not None and tether.gamma > 0.0:
-        predictions = model.predicted_parameters(db, named_params=named)
         if predictions is None:
             raise ValueError(
                 "the γ tether requires predicted BOP parameters; the "
@@ -316,6 +358,13 @@ def objective_function(
                 reg = reg + (p**2).sum()
             (tau * reg).backward()
         if tether is not None and tether.gamma > 0.0:
+            # Fresh network-only forward (NOT the loop's parameters): the
+            # streaming backwards above freed the shared leaf→params graph
+            # segment, so reusing the loop's parameter tensors would
+            # backward through a freed graph. Retaining them instead would
+            # require retain_graph on every structure backward — the
+            # all-at-once memory blow-up this streaming route avoids. The
+            # forward is deterministic, so the values are identical.
             predictions = model.predicted_parameters(db, named_params=named)
             if predictions is None:
                 raise ValueError(
