@@ -69,7 +69,11 @@ def _energies(db: TrainingDatabase, values: np.ndarray) -> np.ndarray:
                 dtype=torch.float64,
             )
             per_atom_energies = atomic_energies(
-                geometry.positions, geometry.cell, geometry.pbc, per_atom
+                geometry.positions,
+                geometry.cell,
+                geometry.pbc,
+                per_atom,
+                neighbors=db.neighbors[k],
             )
             energies[k] = float(per_atom_energies.sum())
     return energies
@@ -87,10 +91,16 @@ def _make_objective(
 
     def energies_tensor(x: torch.Tensor) -> torch.Tensor:
         outputs = []
-        for geometry in db.geometries:
+        for k, geometry in enumerate(db.geometries):
             per_atom = x.unsqueeze(0).expand(geometry.n_atoms, -1)
             outputs.append(
-                atomic_energies(geometry.positions, geometry.cell, geometry.pbc, per_atom).sum()
+                atomic_energies(
+                    geometry.positions,
+                    geometry.cell,
+                    geometry.pbc,
+                    per_atom,
+                    neighbors=db.neighbors[k],
+                ).sum()
             )
         return torch.stack(outputs)
 
@@ -110,7 +120,11 @@ def _make_objective(
             for k, geometry in enumerate(db.geometries):
                 per_atom = leaf.unsqueeze(0).expand(geometry.n_atoms, -1)
                 energy = atomic_energies(
-                    geometry.positions, geometry.cell, geometry.pbc, per_atom
+                    geometry.positions,
+                    geometry.cell,
+                    geometry.pbc,
+                    per_atom,
+                    neighbors=db.neighbors[k],
                 ).sum()
                 ((energy - targets[k]) ** 2).backward()
             assert leaf.grad is not None  # at least one backward ran

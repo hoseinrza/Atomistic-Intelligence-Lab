@@ -39,6 +39,7 @@ from torch import nn
 
 from atomistic_pinn.models import PINN, BaselineNN
 from atomistic_pinn.physics import total_energy
+from atomistic_pinn.physics.neighbors import BOPNeighbors
 from atomistic_pinn.training.database import StructureGeometry, TrainingDatabase
 
 _DIFFERENTIAL_STEP = math.sqrt(np.finfo(np.float64).eps)
@@ -62,9 +63,17 @@ class PINNEnergyModel:
     def structure_energies(self, db: TrainingDatabase) -> torch.Tensor:
         """Scalar total-energy tensor per structure, ``(S,)`` (eV)."""
         outputs = []
-        for geometry, desc in zip(db.geometries, db.descriptors, strict=True):
+        for k, (geometry, desc) in enumerate(zip(db.geometries, db.descriptors, strict=True)):
             params = self.network(torch.as_tensor(desc, dtype=torch.float64))
-            outputs.append(total_energy(geometry.positions, geometry.cell, geometry.pbc, params))
+            outputs.append(
+                total_energy(
+                    geometry.positions,
+                    geometry.cell,
+                    geometry.pbc,
+                    params,
+                    neighbors=db.neighbors[k],
+                )
+            )
         return torch.stack(outputs)
 
     def structure_energies_functional(
@@ -73,8 +82,10 @@ class PINNEnergyModel:
         """Same computation with parameters supplied functionally (autograd
         route through a flat vector)."""
         outputs = []
-        for geometry, desc in zip(db.geometries, db.descriptors, strict=True):
-            outputs.append(self.structure_energy_functional(named_params, geometry, desc))
+        for geometry, desc, neighbor in zip(
+            db.geometries, db.descriptors, db.neighbors, strict=True
+        ):
+            outputs.append(self.structure_energy_functional(named_params, geometry, desc, neighbor))
         return torch.stack(outputs)
 
     def structure_energy_functional(
@@ -82,17 +93,25 @@ class PINNEnergyModel:
         named_params: dict[str, torch.Tensor],
         geometry: StructureGeometry,
         desc: np.ndarray,
+        neighbor: BOPNeighbors | None = None,
     ) -> torch.Tensor:
         """Total energy of ONE structure from functional parameters (eV).
 
         The per-structure entry point used by the streaming autograd
         gradient: the caller builds and frees one structure's graph at a
         time instead of retaining every structure's graph simultaneously.
+
+        ``neighbor`` (the fixed precomputed BOP list from
+        ``TrainingDatabase.neighbors``) removes the per-evaluation neighbor
+        rebuild; positions are fixed during training so the list is
+        identical to the one rebuilt on the fly.
         """
         params = torch.func.functional_call(
             self.network, named_params, (torch.as_tensor(desc, dtype=torch.float64),)
         )
-        return total_energy(geometry.positions, geometry.cell, geometry.pbc, params)
+        return total_energy(
+            geometry.positions, geometry.cell, geometry.pbc, params, neighbors=neighbor
+        )
 
     def predicted_parameters(
         self, db: TrainingDatabase, named_params: dict[str, torch.Tensor] | None = None
@@ -137,8 +156,13 @@ class BaselineEnergyModel:
         named_params: dict[str, torch.Tensor],
         geometry: StructureGeometry,
         desc: np.ndarray,
+        neighbor: BOPNeighbors | None = None,
     ) -> torch.Tensor:
-        """Total energy of ONE structure from functional parameters (eV)."""
+        """Total energy of ONE structure from functional parameters (eV).
+
+        ``neighbor`` is accepted for signature symmetry with
+        :class:`PINNEnergyModel` and ignored (the baseline has no BOP
+        layer, hence no neighbor list)."""
         atomic = torch.func.functional_call(
             self.network, named_params, (torch.as_tensor(desc, dtype=torch.float64),)
         )
@@ -284,7 +308,7 @@ def objective_function(
         named = _flat_to_named(model, leaf)
         targets = torch.as_tensor(db.shifted_targets(), dtype=torch.float64)
         for k, (geometry, desc) in enumerate(zip(db.geometries, db.descriptors, strict=True)):
-            energy = model.structure_energy_functional(named, geometry, desc)
+            energy = model.structure_energy_functional(named, geometry, desc, db.neighbors[k])
             ((energy - targets[k]) ** 2).backward()
         if tau > 0.0:
             reg = torch.zeros((), dtype=torch.float64)
