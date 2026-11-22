@@ -34,7 +34,6 @@ from ase.md.md import MolecularDynamics
 from ase.md.velocitydistribution import MaxwellBoltzmannDistribution, Stationary
 from ase.md.verlet import VelocityVerlet
 
-from atomistic_pinn.constants import CUTOFF_RADIUS
 from atomistic_pinn.simulation.calculator import PINNCalculator
 
 # Labeled engineering decisions (docs/md_plan.md §4 — proposed defaults):
@@ -100,14 +99,18 @@ class MDResult:
         }
 
 
-def _neighbor_statistics(atoms: Atoms, cutoff: float) -> tuple[float, float]:
-    """Min/mean neighbor count within ``cutoff`` per atom (guard logging)."""
-    from atomistic_pinn.geometry.neighbor_list import NeighborList
+def _neighbor_statistics(calculator: PINNCalculator, atoms: Atoms) -> tuple[float, float]:
+    """Min/mean neighbor count within the BOP cutoff per atom (guard logging).
 
-    neighbor_list = NeighborList.build(
-        atoms.get_positions(), atoms.get_cell(), atoms.get_pbc(), cutoff
+    The counts come from the calculator's fixed neighbor metadata — the
+    same lists the potential evaluated this frame — with the bond tier
+    recomputed at the current positions (exact; see
+    ``PINNCalculator.neighbor_counts``)."""
+    counts = calculator.neighbor_counts(
+        np.asarray(atoms.get_positions(), dtype=np.float64),
+        np.asarray(atoms.get_cell(), dtype=np.float64),
+        (bool(atoms.get_pbc()[0]), bool(atoms.get_pbc()[1]), bool(atoms.get_pbc()[2])),
     )
-    counts = np.asarray([len(idx) for idx in neighbor_list.indices], dtype=np.float64)
     return float(np.min(counts)), float(np.mean(counts))
 
 
@@ -119,10 +122,10 @@ def _seed_velocities(atoms: Atoms, temperature_k: float, seed: int) -> None:
     Stationary(atoms)
 
 
-def _observe(atoms: Atoms, cutoff: float) -> tuple[float, float, float, float, float]:
+def _observe(calculator: PINNCalculator, atoms: Atoms) -> tuple[float, float, float, float, float]:
     potential = float(atoms.get_potential_energy())
     kinetic = float(atoms.get_kinetic_energy())
-    min_neighbors, mean_neighbors = _neighbor_statistics(atoms, cutoff)
+    min_neighbors, mean_neighbors = _neighbor_statistics(calculator, atoms)
     return (
         potential + kinetic,
         potential,
@@ -148,6 +151,7 @@ def run_nve(
     _seed_velocities(atoms, temperature_k, seed)
     times, totals, potentials, temperatures, min_n, mean_n = _collect_frames(
         VelocityVerlet(atoms, timestep_fs * units.fs),
+        calculator,
         n_steps,
         log_interval,
         trajectory_path,
@@ -193,7 +197,7 @@ def run_nvt_langevin(
         rng=np.random.default_rng(seed),
     )
     times, totals, potentials, temperatures, min_n, mean_n = _collect_frames(
-        dynamics, n_steps, log_interval, trajectory_path
+        dynamics, calculator, n_steps, log_interval, trajectory_path
     )
     drift = float(totals[-1] - totals[0])
     reference = float(abs(totals[0])) or 1.0
@@ -215,6 +219,7 @@ def run_nvt_langevin(
 
 def _collect_frames(
     dynamics: MolecularDynamics,
+    calculator: PINNCalculator,
     n_steps: int,
     log_interval: int,
     trajectory_path: str | None = None,
@@ -226,11 +231,10 @@ def _collect_frames(
     never committed).
     """
     atoms = dynamics.atoms
-    cutoff = CUTOFF_RADIUS
     times, totals, potentials, temperatures, min_n, mean_n = [], [], [], [], [], []
 
     def log() -> None:
-        t, e_pot, temp, n_min, n_mean = _observe(atoms, cutoff)
+        t, e_pot, temp, n_min, n_mean = _observe(calculator, atoms)
         times.append(dynamics.get_time() / units.fs)
         totals.append(t)
         potentials.append(e_pot)

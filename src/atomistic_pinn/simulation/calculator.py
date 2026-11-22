@@ -45,7 +45,11 @@ from atomistic_pinn.descriptors.torch_builder import (
 )
 from atomistic_pinn.models import PINN
 from atomistic_pinn.physics.bop import total_energy
-from atomistic_pinn.physics.neighbors import BOPNeighbors, build_bop_neighbors
+from atomistic_pinn.physics.neighbors import (
+    BOPNeighbors,
+    build_bop_neighbors,
+    neighbor_geometry,
+)
 from atomistic_pinn.training.config import ResolvedTrainingConfig, load_training_config
 from atomistic_pinn.training.objective import PINNEnergyModel, set_flat_params
 
@@ -147,6 +151,35 @@ class PINNCalculator(Calculator):
         )
         self._cached_bop_neighbors = build_bop_neighbors(positions, cell, list(pbc), CUTOFF_RADIUS)
         self._positions_built_at = positions.copy()
+
+    def neighbor_counts(
+        self,
+        positions: np.ndarray,
+        cell: np.ndarray,
+        pbc: tuple[bool, bool, bool],
+    ) -> np.ndarray:
+        """Per-atom neighbor counts within the BOP cutoff r_c (MD
+        extrapolation guard, ``docs/md_plan.md`` §4).
+
+        Counts come from the same fixed metadata the pipeline evaluates
+        (rebuilt on demand past ``rebuild_threshold``), with the bond tier
+        (``r < r_c``) recomputed at the *current* positions — exact for
+        displacements within the threshold: a pair entering the cutoff
+        between rebuilds was within the extended 2·r_c list already
+        (threshold ≪ r_c), and a pair leaving it is masked by the current
+        distances.
+
+        Returns:
+            ``(N,)`` int64 counts of directed neighbors within r_c.
+        """
+        self._ensure_neighbor_metadata(positions, cell, pbc)
+        assert self._cached_bop_neighbors is not None
+        pos = torch.as_tensor(positions, dtype=torch.float64)
+        cell_t = torch.as_tensor(cell, dtype=torch.float64)
+        _vectors, _distances, bond_mask = neighbor_geometry(
+            pos, cell_t, self._cached_bop_neighbors, CUTOFF_RADIUS
+        )
+        return bond_mask.sum(dim=1).numpy().astype(np.int64)
 
     # -- ASE contract ------------------------------------------------------
 
